@@ -1,0 +1,12 @@
+PyYAML
+pandas
+tqdm
+jsonlines
+python-dotenv
+scikit-learn
+transformers
+datasets
+accelerate
+peft
+trl
+pytest

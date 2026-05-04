@@ -1,0 +1,58 @@
+project:
+  name: project
+  seed: 42
+  timezone: "Asia/Shanghai"
+
+paths:
+  raw_data: "data/raw/input.jsonl"
+  filtered_data: "data/interim/filtered.jsonl"
+  routed_data: "data/interim/routed.jsonl"
+  sft_data: "data/processed/sft.jsonl"
+  train_data: "data/processed/train.jsonl"
+  val_data: "data/processed/val.jsonl"
+  sample_dir: "data/samples"
+  output_root: "outputs"
+  log_dir: "logs"
+
+cleaning:
+  min_text_length: 20
+  drop_empty: true
+  language_whitelist: []
+  max_samples: 0
+
+routing:
+  enabled: false
+  mode: "rule" # rule | llm
+  default_route: "general"
+
+llm:
+  provider: "placeholder"
+  model_name: "Qwen/Qwen2.5-0.5B-Instruct"
+  temperature: 0.2
+  max_tokens: 512
+
+sft:
+  system_prompt_template: "default_system"
+  user_field: "input"
+  assistant_field: "output"
+  include_metadata: true
+
+validation:
+  require_nonempty_input: true
+  require_nonempty_output: true
+  max_input_length: 4000
+  max_output_length: 4000
+
+split:
+  val_ratio: 0.02
+  shuffle: true
+  stratify_by: ""
+
+train:
+  base_model: "Qwen/Qwen2.5-0.5B"
+  output_dir: "outputs"
+  epochs: 3
+  learning_rate: 2.0e-5
+  batch_size: 8
+  gradient_accumulation_steps: 4
+  max_seq_length: 2048

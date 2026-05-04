@@ -1,0 +1,56 @@
+{%- set ns = namespace(system_message='', has_system=false) %}
+{%- if messages and messages[0].role == 'system' %}
+    {%- set ns.system_message = messages[0].content %}
+    {%- set ns.has_system = true %}
+{%- endif %}
+
+{{- '<|im_start|>system\n' }}
+{{- 'Example\n\n' }}
+{{- 'Instruction:\n' }}
+{{- 'You are a clear, careful, and reliable assistant. Do not produce any tool call, function call, plugin request, or external action format. If reasoning is included, it must appear only under the Thinking section. The final user-facing reply must be written as a complete answer under Answer. For math problems, the final result should be stated explicitly and written in \\boxed{} form.\n\n' }}
+{{- 'Request:\n' }}
+{{- 'Solve for x: 3x + 5 = 20.\n\n' }}
+{{- 'Thinking:\n' }}
+{{- 'Subtract 5 from both sides to get 3x = 15. Then divide both sides by 3 to get x = 5. The final answer should be presented clearly, with the result boxed.\n\n' }}
+{{- 'Answer:\n' }}
+{{- 'Starting from 3x + 5 = 20, subtract 5 from both sides to obtain 3x = 15. Then divide both sides by 3, which gives x = 5. Therefore, the answer is \\boxed{5}.\n\n' }}
+{{- 'Actual Session\n\n' }}
+{{- 'Instruction:\n' }}
+{%- if ns.has_system %}
+    {{- ns.system_message + '\n' }}
+{%- else %}
+    {{- 'You are a clear, careful, and reliable assistant. If reasoning is included, it must appear only under the Thinking section. The final user-facing reply must be written as a complete answer under Answer. Do not produce any tool call, function call, plugin request, or external action format.\n' }}
+{%- endif %}
+{{- '<|im_end|>\n' }}
+
+{%- for message in messages %}
+    {%- if message.role == 'system' %}
+        {%- if not loop.first %}
+            {{- '<|im_start|>user\nInstruction:\n' + message.content + '<|im_end|>\n' }}
+        {%- endif %}
+    {%- elif message.role == 'user' %}
+        {{- '<|im_start|>user\nRequest:\n' + message.content + '<|im_end|>\n' }}
+    {%- elif message.role == 'assistant' %}
+        {%- set answer_content = message.content %}
+        {%- set thinking_content = '' %}
+        {%- if message.reasoning_content is defined and message.reasoning_content is not none %}
+            {%- set thinking_content = message.reasoning_content %}
+        {%- elif '<think>' in message.content and '</think>' in message.content %}
+            {%- set thinking_content = message.content.split('</think>')[0].split('<think>')[-1].strip('\n') %}
+            {%- set answer_content = message.content.split('</think>')[-1].lstrip('\n') %}
+        {%- endif %}
+        {{- '<|im_start|>assistant\n' }}
+        {%- if thinking_content %}
+            {{- 'Thinking:\n' + thinking_content + '\n\n' }}
+        {%- endif %}
+        {{- 'Answer:\n' + answer_content + '<|im_end|>\n' }}
+    {%- endif %}
+{%- endfor %}
+
+{%- if add_generation_prompt %}
+    {{- '<|im_start|>assistant\n' }}
+    {%- if enable_thinking is defined and enable_thinking %}
+        {{- 'Thinking:\n' }}
+    {%- endif %}
+    {{- '\nAnswer:\n' }}
+{%- endif %}

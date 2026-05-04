@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+
+# Virtual env
+.venv/
+venv/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Env
+.env
+
+# Logs and outputs
+logs/*
+!logs/.gitkeep
+outputs/*
+!outputs/.gitkeep
+
+# Data artifacts (track structure only)
+data/raw/*
+data/interim/*
+data/processed/*
+data/samples/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/samples/.gitkeep
+
+# Notebook checkpoints
+notebooks/.ipynb_checkpoints/
