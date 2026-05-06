@@ -1,2 +1,3 @@
-# Add evaluation dependencies here
+pyyaml
+requests
 
