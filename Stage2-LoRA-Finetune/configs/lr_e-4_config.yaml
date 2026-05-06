@@ -29,6 +29,7 @@ finetune:
   model_path: models/Qwen3-0.6B-Base
   dataset_path: data/sft/sft_boxed_small.json
   output_dir: outputs/qwen3-0.6b-lora
+  timestamp_output_dir: true
   logging_dir: logs
   max_seq_length: 1024
   eval_split_ratio: 0.0

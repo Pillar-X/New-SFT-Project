@@ -194,6 +194,7 @@ def main() -> None:
         trial_config["finetune"]["learning_rate"] = learning_rate
         trial_config["finetune"]["max_steps"] = trial_max_steps
         trial_config["finetune"]["output_dir"] = str(trial_output_dir)
+        trial_config["finetune"]["timestamp_output_dir"] = False
         run_prefix = "debug-fixedlr" if fixed_lr is not None else "tpe-lr"
         trial_config["finetune"]["run_name"] = (
             f"{run_prefix}-{learning_rate:.2e}-s{trial_max_steps}-trial-{trial.number:04d}"

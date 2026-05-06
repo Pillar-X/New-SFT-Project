@@ -66,6 +66,36 @@ WANDB_ENTITY=your_team_or_username
 WANDB_NAME=qwen3-0.6b-lora-sft-middle
 ```
 
+## 云 GPU 运行前：手动上传文件清单
+
+仓库里不会包含所有大文件。你在云端通常需要先 `git clone`，再单独上传下面这些模型/数据到对应路径（路径相对于 `Stage2-LoRA-Finetune/`）：
+
+- `models/Qwen3-0.6B-Base/`
+  - 用途：`finetune.model_path`
+  - 至少需要完整的 Hugging Face 模型目录（`config.json`、tokenizer 文件、`model.safetensors` 等）。
+  - 其中 `model.safetensors` 体积大，未放 GitHub，需要你手动上传。
+- `data/sft/sft_boxed_small.json`
+  - 用途：`finetune.dataset_path`（训练集）
+  - 这是训练主数据，默认不会随仓库分发。
+- `data/eval/valid_800.jsonl`
+  - 用途：`evaluation.test_data_path`（boxed 评测集）
+  - 训练中在线评测和 `scripts/04_eval_boxed_accuracy.py` 都依赖它。
+- `data/raw/valid_1000.jsonl`（可选）
+  - 用途：仅在你需要重新执行 `scripts/02_split_eval_test.py` 时使用。
+  - 若你已上传 `data/eval/valid_800.jsonl` 和 `data/test/valid_200.jsonl`，可不上传这个文件。
+
+如果你在云端也要跑 Stage1 清洗流程，还需要额外上传根目录大文件：
+
+- `new-SFT-project/nv-community_Nemotron-CC-Math-v1_4plus_first100000.jsonl`（Stage1 输入原始大数据）
+
+建议在云端先检查关键文件是否齐全：
+
+```bash
+cd Stage2-LoRA-Finetune
+ls -lh models/Qwen3-0.6B-Base/model.safetensors
+ls -lh data/sft/sft_boxed_small.json data/eval/valid_800.jsonl
+```
+
 ## Pipeline 运行命令
 
 ```bash
@@ -89,7 +119,7 @@ conda activate llm_project
 2. 检查 `configs/default.yaml` 中关键参数：
 - `finetune.model_path: models/Qwen3-0.6B-Base`
 - `finetune.dataset_path: data/sft/sft_boxed_small.json`
-- `finetune.output_dir: outputs/qwen3-0.6b-lora`
+- `finetune.output_dir: outputs/qwen3-0.6b-lora`（实际保存目录会自动追加时间戳，见 `finetune.timestamp_output_dir`）
 - `finetune.dtype: auto`（可改为 `float16` / `bfloat16`）
 - 单卡默认使用 `configs/default.yaml`
 
@@ -109,11 +139,12 @@ make train-lora
 ```
 
 5. 训练产物查看：
-- LoRA adapter 权重默认在 `outputs/qwen3-0.6b-lora/`
+- LoRA adapter 权重目录由 `finetune.output_dir` 决定；默认会在该路径名后追加时间戳（例如 `outputs/qwen3-0.6b-lora-20260506-143022/`），避免多次训练互相覆盖。启动时会打印一行 `[output-dir] ... -> ...`。
+- 若需要固定目录（例如自动化脚本），将 `finetune.timestamp_output_dir` 设为 `false`。
 - 训练指标会写入同目录下的 `trainer_state.json` 和 `train_results.json`（如有）
-- 若启用 Ray 异步评估，还会输出：
-  - `outputs/qwen3-0.6b-lora/boxed_eval_reports/boxed_eval_step_*.json`
-  - `outputs/qwen3-0.6b-lora/async_eval_snapshots/`（评估完成后自动清理）
+- 若启用 Ray 异步评估，还会在**本次训练带时间戳的输出目录**下生成：
+  - `boxed_eval_reports/boxed_eval_step_*.json`
+  - `async_eval_snapshots/`（评估完成后自动清理）
 
 ### 单机双卡：训练与评估并行（Ray）
 
@@ -221,8 +252,10 @@ make plot-tpe
 python scripts/04_eval_boxed_accuracy.py --config configs/default.yaml
 ```
 
-评估结果会保存到：
-- `outputs/qwen3-0.6b-lora/boxed_eval_report.json`
+训练若启用了 `timestamp_output_dir`，`--adapter-path` 需指向训练结束时打印的实际目录（或显式传入该次 `.../outputs/qwen3-0.6b-lora-YYYYMMDD-HHMMSS/`）。
+
+评估结果会保存到（默认与 `finetune.output_dir` 一致；若启用了时间戳子目录，则为该次运行目录）：
+- `boxed_eval_report.json`
 
 ## 数据流说明
 
@@ -232,7 +265,7 @@ python scripts/04_eval_boxed_accuracy.py --config configs/default.yaml
 4. `scripts/02_split_eval_test.py` 将 `data/raw/valid_1000.jsonl` 按固定随机种子切分为 `data/eval/valid_800.jsonl` 与 `data/test/valid_200.jsonl`。
 5. `scripts/03_train_lora.py` 读取 `data/sft/sft_boxed_small.json`，使用 PEFT 对 `models/Qwen3-0.6B-Base` 进行 LoRA 微调，并将日志上报到 W&B。
 6. `scripts/04_eval_boxed_accuracy.py` 使用 `data/eval/valid_800.jsonl` 作为测试集，每次随机抽样 50 条；每条样本评测 `question` 和 `seed_question`，输出 question/seed/combined 三个准确率。
-7. LoRA 适配器权重、训练指标和评测结果默认输出到 `outputs/qwen3-0.6b-lora/`。
+7. LoRA 适配器权重、训练指标和评测结果默认输出到 `finetune.output_dir` 对应目录（默认会带时间戳子目录，见上文）。
 
 ## 输出文件说明
 

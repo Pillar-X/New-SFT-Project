@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 from collections import deque
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -41,6 +42,18 @@ def _to_int(value: Any) -> int:
 
 def _to_float(value: Any) -> float:
     return float(value)
+
+
+def _resolve_output_dir(ft_cfg: dict[str, Any]) -> str:
+    """Append a wall-clock timestamp so repeated runs do not overwrite adapters."""
+    base = Path(str(ft_cfg["output_dir"]))
+    if not bool(ft_cfg.get("timestamp_output_dir", True)):
+        return str(base)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    resolved = base.parent / f"{base.name}-{stamp}"
+    out = str(resolved)
+    print(f"[output-dir] {base} -> {out}")
+    return out
 
 
 def _evaluate_checkpoint_boxed_accuracy(
@@ -524,6 +537,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
     set_seed(seed)
 
     ft_cfg = config["finetune"]
+    ft_cfg["output_dir"] = _resolve_output_dir(ft_cfg)
     lora_cfg = ft_cfg["lora"]
 
     tokenizer = AutoTokenizer.from_pretrained(ft_cfg["model_path"], use_fast=True)
