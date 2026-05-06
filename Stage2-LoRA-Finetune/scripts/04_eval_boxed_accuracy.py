@@ -82,9 +82,19 @@ def main() -> None:
     out_file = output_dir / "boxed_eval_report.json"
     out_file.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"Sampled: {report['total']}")
-    print(f"Correct: {report['correct']}")
-    print(f"Accuracy: {report['accuracy']:.4f}")
+    print(f"Sampled rows: {len(sampled_items)}")
+    print(
+        f"Question accuracy: {report['question_accuracy']:.4f} "
+        f"({report['question_correct']}/{report['question_total']})"
+    )
+    print(
+        f"Seed accuracy: {report['seed_accuracy']:.4f} "
+        f"({report['seed_correct']}/{report['seed_total']})"
+    )
+    print(
+        f"Combined accuracy: {report['combined_accuracy']:.4f} "
+        f"({report['combined_correct']}/{report['combined_total']})"
+    )
     print(f"Saved report: {out_file}")
 
 

@@ -150,7 +150,7 @@ python scripts/03_train_lora.py --config configs/default_ray_dual_gpu.yaml
 
 运行后日志会出现：
 - 提交异步任务：`[boxed-eval][ray] submitted step=...`
-- 评估完成结果：`[boxed-eval][ray] step=... accuracy=...`
+- 评估完成结果：`[boxed-eval][ray] step=... question_acc=... seed_acc=... combined_acc=...`
 - 训练开始前基线评估：`[boxed-eval] init_step=0 ...`（Ray 模式会提交 `step=0` 的异步评估任务）
 
 ## 如何启动 TPE 参数搜索
@@ -174,9 +174,9 @@ make tpe-search
 
 3. 搜参评估逻辑：
 - 数据集：`data/eval/valid_800.jsonl`
-- 每次评估随机抽样：`evaluation.sample_size = 30`
+- 每次评估随机抽样：`evaluation.sample_size = 50`
 - 输入模型：`question`
-- 抽取模型回复中的 `\boxed{}`，与样本的 `answer` 比较
+- 每条样本会评测两个问题：`question` 与 `seed_question`，分别和 `answer` / `seed_answer` 比较 `\boxed{}` 结果
 - 在 TPE 搜参模式下，会关闭训练中每 100 step 的自动评估，只在 trial 结束时评估一次
 
 4. 搜参输出文件：
@@ -209,9 +209,9 @@ make plot-tpe
 
 6. 测试集评估（boxed 准确率）：
 - 测试集：`data/eval/valid_800.jsonl`
-- 评测方式：每次随机抽取 30 条题目，将问题输入模型，抽取回复中的 `\boxed{}` 与测试集答案对比，计算正确率
+- 评测方式：每次随机抽取 50 条样本；每条样本依次评测 `question` 与 `seed_question` 两个问题，分别统计准确率并给出合并准确率
 - 训练中会按 `evaluation.every_n_steps`（默认 100）自动执行一次并打印结果，例如：
-  - `[boxed-eval] step=100 sampled=30 correct=xx accuracy=0.xxxx`
+  - `[boxed-eval] step=100 sampled=50 question_acc=0.xxxx seed_acc=0.xxxx combined_acc=0.xxxx`
 - 训练开始前会先做一轮 step=0 的 boxed 评估，作为基线。
 - 若启用 `evaluation.async_backend: ray`，评估会异步在 `evaluation.ray.eval_device` 指定 GPU 上运行，训练不会等待评估结束。
 - 若 `finetune.eval_split_ratio > 0`（例如 0.1），会从训练数据中切出对应比例作为 `eval_dataset`，该部分不参与梯度更新；Trainer 会按 `finetune.eval_steps` 输出 `eval_loss`，可用于观察过拟合趋势。
@@ -231,7 +231,7 @@ python scripts/04_eval_boxed_accuracy.py --config configs/default.yaml
 3. `scripts/01_filter_data.py` 做基础过滤，输出到 `data/interim/` 与 `data/processed/`。
 4. `scripts/02_split_eval_test.py` 将 `data/raw/valid_1000.jsonl` 按固定随机种子切分为 `data/eval/valid_800.jsonl` 与 `data/test/valid_200.jsonl`。
 5. `scripts/03_train_lora.py` 读取 `data/sft/sft_boxed_small.json`，使用 PEFT 对 `models/Qwen3-0.6B-Base` 进行 LoRA 微调，并将日志上报到 W&B。
-6. `scripts/04_eval_boxed_accuracy.py` 使用 `data/eval/valid_800.jsonl` 作为测试集，每次随机抽样 30 条计算 `\boxed{}` 正确率。
+6. `scripts/04_eval_boxed_accuracy.py` 使用 `data/eval/valid_800.jsonl` 作为测试集，每次随机抽样 50 条；每条样本评测 `question` 和 `seed_question`，输出 question/seed/combined 三个准确率。
 7. LoRA 适配器权重、训练指标和评测结果默认输出到 `outputs/qwen3-0.6b-lora/`。
 
 ## 输出文件说明

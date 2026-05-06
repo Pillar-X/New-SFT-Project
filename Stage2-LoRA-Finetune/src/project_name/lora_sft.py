@@ -86,9 +86,12 @@ def _evaluate_checkpoint_boxed_accuracy(
 
     return {
         "step": step,
-        "total": report["total"],
-        "correct": report["correct"],
-        "accuracy": report["accuracy"],
+        "question_accuracy": report["question_accuracy"],
+        "seed_accuracy": report["seed_accuracy"],
+        "combined_accuracy": report["combined_accuracy"],
+        "question_total": report["question_total"],
+        "seed_total": report["seed_total"],
+        "combined_total": report["combined_total"],
         "report_path": str(out_file),
         "adapter_path": adapter_path,
     }
@@ -146,8 +149,9 @@ class BoxedEvalCallback(TrainerCallback):
 
         print(
             f"[boxed-eval] {step_label}={step_value} "
-            f"sampled={report['total']} correct={report['correct']} "
-            f"accuracy={report['accuracy']:.4f}"
+            f"sampled={len(sampled)} question_acc={report['question_accuracy']:.4f} "
+            f"seed_acc={report['seed_accuracy']:.4f} "
+            f"combined_acc={report['combined_accuracy']:.4f}"
         )
 
     def on_step_end(
@@ -273,8 +277,10 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                 result = ray.get(ref)
                 print(
                     f"[boxed-eval][ray] step={result['step']} "
-                    f"sampled={result['total']} correct={result['correct']} "
-                    f"accuracy={result['accuracy']:.4f} report={result['report_path']}"
+                    f"question_acc={result['question_accuracy']:.4f} "
+                    f"seed_acc={result['seed_accuracy']:.4f} "
+                    f"combined_acc={result['combined_accuracy']:.4f} "
+                    f"report={result['report_path']}"
                 )
             except Exception as exc:
                 print(f"[boxed-eval][ray] step={step} failed: {exc}")
@@ -373,8 +379,10 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                 result = ray.get(ref)
                 print(
                     f"[boxed-eval][ray][finalized] step={result['step']} "
-                    f"sampled={result['total']} correct={result['correct']} "
-                    f"accuracy={result['accuracy']:.4f} report={result['report_path']}"
+                    f"question_acc={result['question_accuracy']:.4f} "
+                    f"seed_acc={result['seed_accuracy']:.4f} "
+                    f"combined_acc={result['combined_accuracy']:.4f} "
+                    f"report={result['report_path']}"
                 )
             except Exception as exc:
                 print(f"[boxed-eval][ray][finalized] step={step} failed: {exc}")

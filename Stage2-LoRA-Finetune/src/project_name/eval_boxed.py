@@ -17,6 +17,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 class EvalItem:
     question: str
     gold_answer: str
+    seed_question: str
+    seed_answer: str
 
 
 def load_eval_items(path: str) -> list[EvalItem]:
@@ -33,9 +35,18 @@ def load_eval_items(path: str) -> list[EvalItem]:
             row = json.loads(line)
             question = str(row.get("question", "")).strip()
             answer = str(row.get("answer", "")).strip()
+            seed_question = str(row.get("seed_question", "")).strip()
+            seed_answer = str(row.get("seed_answer", "")).strip()
             if not question:
                 continue
-            items.append(EvalItem(question=question, gold_answer=answer))
+            items.append(
+                EvalItem(
+                    question=question,
+                    gold_answer=answer,
+                    seed_question=seed_question,
+                    seed_answer=seed_answer,
+                )
+            )
     if not items:
         raise ValueError(f"No valid eval items in: {path}")
     return items
@@ -198,10 +209,12 @@ def evaluate_boxed_accuracy(
     do_sample: bool,
 ) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
-    correct = 0
+    question_correct = 0
+    seed_correct = 0
+    seed_total = 0
 
     for idx, item in enumerate(items):
-        response = generate_response(
+        question_response = generate_response(
             model=model,
             tokenizer=tokenizer,
             question=item.question,
@@ -209,26 +222,63 @@ def evaluate_boxed_accuracy(
             temperature=temperature,
             do_sample=do_sample,
         )
-        pred_boxed = extract_boxed_content(response)
-        is_correct = answers_match(pred_boxed, item.gold_answer)
-        correct += int(is_correct)
+        question_pred_boxed = extract_boxed_content(question_response)
+        question_is_correct = answers_match(question_pred_boxed, item.gold_answer)
+        question_correct += int(question_is_correct)
+
+        seed_response = None
+        seed_pred_boxed = None
+        seed_is_correct = None
+        if item.seed_question:
+            seed_total += 1
+            seed_response = generate_response(
+                model=model,
+                tokenizer=tokenizer,
+                question=item.seed_question,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                do_sample=do_sample,
+            )
+            seed_pred_boxed = extract_boxed_content(seed_response)
+            seed_is_correct = answers_match(seed_pred_boxed, item.seed_answer)
+            seed_correct += int(seed_is_correct)
+
         results.append(
             {
                 "index": idx,
                 "question": item.question,
-                "model_response": response,
-                "pred_boxed": pred_boxed,
                 "gold_answer": item.gold_answer,
-                "is_correct": is_correct,
+                "question_model_response": question_response,
+                "question_pred_boxed": question_pred_boxed,
+                "question_is_correct": question_is_correct,
+                "seed_question": item.seed_question,
+                "seed_answer": item.seed_answer,
+                "seed_model_response": seed_response,
+                "seed_pred_boxed": seed_pred_boxed,
+                "seed_is_correct": seed_is_correct,
             }
         )
 
-    total = len(items)
-    accuracy = correct / total if total else 0.0
+    question_total = len(items)
+    question_accuracy = question_correct / question_total if question_total else 0.0
+    seed_accuracy = seed_correct / seed_total if seed_total else 0.0
+    combined_total = question_total + seed_total
+    combined_correct = question_correct + seed_correct
+    combined_accuracy = combined_correct / combined_total if combined_total else 0.0
     return {
-        "total": total,
-        "correct": correct,
-        "accuracy": accuracy,
+        "question_total": question_total,
+        "question_correct": question_correct,
+        "question_accuracy": question_accuracy,
+        "seed_total": seed_total,
+        "seed_correct": seed_correct,
+        "seed_accuracy": seed_accuracy,
+        "combined_total": combined_total,
+        "combined_correct": combined_correct,
+        "combined_accuracy": combined_accuracy,
+        # Keep compatibility with existing downstream printing.
+        "total": combined_total,
+        "correct": combined_correct,
+        "accuracy": combined_accuracy,
         "results": results,
     }
 

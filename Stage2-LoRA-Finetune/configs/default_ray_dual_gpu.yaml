@@ -70,7 +70,7 @@ finetune:
 
 evaluation:
   test_data_path: data/eval/valid_800.jsonl
-  sample_size: 128
+  sample_size: 50
   every_n_steps: 200
   seed: 42
   max_new_tokens: 512
