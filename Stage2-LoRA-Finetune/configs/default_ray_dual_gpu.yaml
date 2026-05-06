@@ -31,7 +31,7 @@ finetune:
   output_dir: outputs/qwen3-0.6b-lora
   timestamp_output_dir: true
   logging_dir: logs
-  max_seq_length: 512
+  max_seq_length: 1024
   eval_split_ratio: 0.1
   use_wandb: true
   wandb_mode: online
@@ -75,7 +75,7 @@ evaluation:
   sample_size: 50
   every_n_steps: 200
   seed: 42
-  max_new_tokens: 1024
+  max_new_tokens: 512
   temperature: 0.0
   do_sample: false
   enable_during_training: true
