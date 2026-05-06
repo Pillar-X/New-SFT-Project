@@ -1,0 +1,30 @@
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 199/199 [07:26<00:00,  2.24s/it]
+{'loss': '0.694', 'grad_norm': '0.6121', 'learning_rate': '0.0001999', 'epoch': '0.01997'}
+{'loss': '0.6398', 'grad_norm': '0.5', 'learning_rate': '0.0001978', 'epoch': '0.03994'}
+{'loss': '0.5567', 'grad_norm': '0.5637', 'learning_rate': '0.0001931', 'epoch': '0.05991'}
+{'loss': '0.5944', 'grad_norm': '0.7519', 'learning_rate': '0.0001859', 'epoch': '0.07988'}
+{'loss': '0.5604', 'grad_norm': '0.3805', 'learning_rate': '0.0001765', 'epoch': '0.09985'}
+{'loss': '0.6315', 'grad_norm': '0.3915', 'learning_rate': '0.000165', 'epoch': '0.1198'}
+{'loss': '0.5068', 'grad_norm': '0.3939', 'learning_rate': '0.0001519', 'epoch': '0.1398'}
+{'loss': '0.6039', 'grad_norm': '0.429', 'learning_rate': '0.0001373', 'epoch': '0.1598'}
+{'loss': '0.6243', 'grad_norm': '0.4315', 'learning_rate': '0.0001218', 'epoch': '0.1797'}
+{'loss': '0.5752', 'grad_norm': '0.3907', 'learning_rate': '0.0001057', 'epoch': '0.1997'}
+{'loss': '0.5452', 'grad_norm': '0.342', 'learning_rate': '8.944e-05', 'epoch': '0.2197'}
+{'loss': '0.555', 'grad_norm': '0.4027', 'learning_rate': '7.346e-05', 'epoch': '0.2396'}
+{'loss': '0.5552', 'grad_norm': '0.3933', 'learning_rate': '5.819e-05', 'epoch': '0.2596'}
+{'loss': '0.5585', 'grad_norm': '0.4094', 'learning_rate': '4.402e-05', 'epoch': '0.2796'}
+{'loss': '0.5201', 'grad_norm': '0.4008', 'learning_rate': '3.133e-05', 'epoch': '0.2996'}
+{'loss': '0.5163', 'grad_norm': '0.3395', 'learning_rate': '2.046e-05', 'epoch': '0.3195'}
+{'loss': '0.5779', 'grad_norm': '0.4461', 'learning_rate': '1.169e-05', 'epoch': '0.3395'}
+{'loss': '0.5476', 'grad_norm': '0.3171', 'learning_rate': '5.253e-06', 'epoch': '0.3595'}
+{'loss': '0.5238', 'grad_norm': '0.4311', 'learning_rate': '1.322e-06', 'epoch': '0.3794'}
+{'train_runtime': '449.5', 'train_samples_per_second': '7.083', 'train_steps_per_second': '0.443', 'train_loss': '0.5741', 'epoch': '0.3974'}
+[transformers] `use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+[transformers] Caching is incompatible with gradient checkpointing in Qwen3DecoderLayer. Setting `past_key_values=None`.
+[32m[I 2026-05-06 00:44:41,527][0m Trial 4 finished with value: 0.0 and parameters: {}. Best is trial 1 with value: 0.0.[0m
+Best trial: 1
+Best learning_rate: 1.329291894316217e-05
+Best boxed_acc_step199: 0.000000
+Leaderboard: /home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/outputs/hparam_search/leaderboard.csv
+Best config: /home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/outputs/hparam_search/best_config.yaml
+Summary: /home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/outputs/hparam_search/summary.md

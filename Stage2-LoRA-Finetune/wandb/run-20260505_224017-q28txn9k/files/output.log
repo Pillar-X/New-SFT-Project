@@ -1,0 +1,251 @@
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 101/101 [10:28<00:00, 66.17s/it][33m[W 2026-05-05 22:52:01,761][0m Trial 0 failed with parameters: {'learning_rate': 7.45934328572656e-08} because of the following error: KeyboardInterrupt().[0m
+{'loss': '0.7584', 'grad_norm': '1.079', 'learning_rate': '7.411e-08', 'epoch': '0.01997'}
+{'loss': '0.8114', 'grad_norm': '1.122', 'learning_rate': '7.028e-08', 'epoch': '0.03994'}
+{'loss': '0.7383', 'grad_norm': '1.098', 'learning_rate': '6.302e-08', 'epoch': '0.05991'}
+{'loss': '0.7958', 'grad_norm': '0.9264', 'learning_rate': '5.309e-08', 'epoch': '0.07988'}
+{'loss': '0.7447', 'grad_norm': '0.8266', 'learning_rate': '4.152e-08', 'epoch': '0.09985'}
+{'loss': '0.8313', 'grad_norm': '0.8942', 'learning_rate': '2.95e-08', 'epoch': '0.1198'}
+{'loss': '0.7066', 'grad_norm': '1.219', 'learning_rate': '1.83e-08', 'epoch': '0.1398'}
+{'loss': '0.8059', 'grad_norm': '0.8979', 'learning_rate': '9.074e-09', 'epoch': '0.1598'}
+{'loss': '0.8427', 'grad_norm': '1.159', 'learning_rate': '2.782e-09', 'epoch': '0.1797'}
+[boxed-eval] step=100 sampled=50 correct=8 accuracy=0.1600
+{'loss': '0.7728', 'grad_norm': '0.9318', 'learning_rate': '7.822e-11', 'epoch': '0.1997'}
+{'train_runtime': '633.5', 'train_samples_per_second': '2.53', 'train_steps_per_second': '0.159', 'train_loss': '0.7818', 'epoch': '0.2017'}
+Traceback (most recent call last):
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+                      ^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 159, in objective
+    train_result = trainer.train()
+                   ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1427, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1525, in _inner_training_loop
+    return self._finalize_training(trial, num_train_samples, start_time)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1857, in _finalize_training
+    self.control = self.callback_handler.on_train_end(self.args, self.state, self.control)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer_callback.py", line 495, in on_train_end
+    return self.call_event("on_train_end", args, state, control, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer_callback.py", line 545, in call_event
+    result = getattr(callback, event)(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/lora_sft.py", line 129, in on_train_end
+    self._run_boxed_eval(
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/lora_sft.py", line 77, in _run_boxed_eval
+    report = evaluate_boxed_accuracy(
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/eval_boxed.py", line 204, in evaluate_boxed_accuracy
+    response = generate_response(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/eval_boxed.py", line 186, in generate_response
+    output_ids = model.generate(**model_inputs, **gen_kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/peft/peft_model.py", line 2122, in generate
+    outputs = self.base_model.generate(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/generation/utils.py", line 2539, in generate
+    result = decoding_method(
+             ^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/generation/utils.py", line 2746, in _sample
+    outputs = model_forward(**model_inputs, return_dict=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/utils/generic.py", line 900, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 492, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+                                       ^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/utils/generic.py", line 976, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/utils/output_capturing.py", line 248, in wrapper
+    outputs = func(self, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 424, in forward
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/modeling_layers.py", line 93, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 318, in forward
+    hidden_states, _ = self.self_attn(
+                       ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 265, in forward
+    value_states = self.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/peft/tuners/lora/layer.py", line 969, in forward
+    result = result + lora_B(lora_A(dropout(x))) * scaling
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 134, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+[33m[W 2026-05-05 22:52:01,770][0m Trial 0 failed with value None.[0m
+Traceback (most recent call last):
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 219, in <module>
+    main()
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 197, in main
+    study.optimize(objective, n_trials=args.n_trials)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/study.py", line 490, in optimize
+    _optimize(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 68, in _optimize
+    _optimize_sequential(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 165, in _optimize_sequential
+    frozen_trial_id = _run_trial(study, func, catch)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 263, in _run_trial
+    raise func_err
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+                      ^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 159, in objective
+    train_result = trainer.train()
+                   ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1427, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1525, in _inner_training_loop
+    return self._finalize_training(trial, num_train_samples, start_time)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1857, in _finalize_training
+    self.control = self.callback_handler.on_train_end(self.args, self.state, self.control)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer_callback.py", line 495, in on_train_end
+    return self.call_event("on_train_end", args, state, control, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer_callback.py", line 545, in call_event
+    result = getattr(callback, event)(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/lora_sft.py", line 129, in on_train_end
+    self._run_boxed_eval(
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/lora_sft.py", line 77, in _run_boxed_eval
+    report = evaluate_boxed_accuracy(
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/eval_boxed.py", line 204, in evaluate_boxed_accuracy
+    response = generate_response(
+               ^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/src/project_name/eval_boxed.py", line 186, in generate_response
+    output_ids = model.generate(**model_inputs, **gen_kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/peft/peft_model.py", line 2122, in generate
+    outputs = self.base_model.generate(*args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/generation/utils.py", line 2539, in generate
+    result = decoding_method(
+             ^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/generation/utils.py", line 2746, in _sample
+    outputs = model_forward(**model_inputs, return_dict=True)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/utils/generic.py", line 900, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 492, in forward
+    outputs: BaseModelOutputWithPast = self.model(
+                                       ^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/utils/generic.py", line 976, in wrapper
+    output = func(self, *args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/utils/output_capturing.py", line 248, in wrapper
+    outputs = func(self, *args, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 424, in forward
+    hidden_states = decoder_layer(
+                    ^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/modeling_layers.py", line 93, in __call__
+    return super().__call__(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 318, in forward
+    hidden_states, _ = self.self_attn(
+                       ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/models/qwen3/modeling_qwen3.py", line 265, in forward
+    value_states = self.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/peft/tuners/lora/layer.py", line 969, in forward
+    result = result + lora_B(lora_A(dropout(x))) * scaling
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1779, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1790, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/nn/modules/linear.py", line 134, in forward
+    return F.linear(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

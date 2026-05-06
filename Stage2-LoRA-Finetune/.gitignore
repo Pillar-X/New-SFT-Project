@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+
+# Environments
+.env
+.venv/
+venv/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+
+# Outputs
+logs/
+outputs/
+models/
+
+# Data artifacts
+data/interim/*
+data/processed/*
+data/sft/*
+data/train/*
+data/eval/*
+
+# Keep folder structure
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/sft/.gitkeep
+!data/train/.gitkeep
+!data/eval/.gitkeep

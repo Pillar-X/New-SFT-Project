@@ -1,0 +1,43 @@
+ 40%|███████████████████████████████████████████▋                                                                 | 162/404 [11:05<16:45,  4.15s/it]Traceback (most recent call last):
+{'loss': '0.6597', 'grad_norm': '0.4188', 'learning_rate': '0.0001385', 'epoch': '0.04963'}
+{'loss': '0.7472', 'grad_norm': '0.3203', 'learning_rate': '0.0001999', 'epoch': '0.09926'}
+{'loss': '0.6807', 'grad_norm': '0.4502', 'learning_rate': '0.0001992', 'epoch': '0.1489'}
+{'loss': '0.6905', 'grad_norm': '0.2966', 'learning_rate': '0.0001978', 'epoch': '0.1985'}
+{'loss': '0.6179', 'grad_norm': '0.3111', 'learning_rate': '0.0001958', 'epoch': '0.2481'}
+{'loss': '0.6406', 'grad_norm': '0.2486', 'learning_rate': '0.0001932', 'epoch': '0.2978'}
+{'loss': '0.6643', 'grad_norm': '0.2593', 'learning_rate': '0.00019', 'epoch': '0.3474'}
+{'loss': '0.6173', 'grad_norm': '0.2769', 'learning_rate': '0.0001863', 'epoch': '0.397'}
+{'loss': '0.6239', 'grad_norm': '0.2494', 'learning_rate': '0.0001819', 'epoch': '0.4467'}
+{'loss': '0.6461', 'grad_norm': '0.2482', 'learning_rate': '0.0001771', 'epoch': '0.4963'}
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/03_train_lora.py", line 76, in <module>                            
+{'eval_loss': '0.7031', 'eval_runtime': '5.263', 'eval_samples_per_second': '12.54', 'eval_steps_per_second': '6.271', 'epoch': '0.4963'}
+{'loss': '0.6533', 'grad_norm': '0.2795', 'learning_rate': '0.0001717', 'epoch': '0.5459'}
+{'loss': '0.6944', 'grad_norm': '0.2387', 'learning_rate': '0.0001659', 'epoch': '0.5955'}
+{'loss': '0.6434', 'grad_norm': '0.3026', 'learning_rate': '0.0001596', 'epoch': '0.6452'}
+{'loss': '0.5933', 'grad_norm': '0.2635', 'learning_rate': '0.000153', 'epoch': '0.6948'}
+{'loss': '0.6424', 'grad_norm': '0.2567', 'learning_rate': '0.000146', 'epoch': '0.7444'}
+{'loss': '0.6734', 'grad_norm': '0.2365', 'learning_rate': '0.0001387', 'epoch': '0.794'}
+    main()
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/03_train_lora.py", line 62, in main
+    train_result = trainer.train()
+                   ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1427, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1509, in _inner_training_loop
+    self._run_epoch(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1737, in _run_epoch
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1937, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/accelerate/accelerator.py", line 2834, in backward
+    self.scaler.scale(loss).backward(**kwargs)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/_tensor.py", line 631, in backward
+    torch.autograd.backward(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/autograd/__init__.py", line 381, in backward
+    _engine_run_backward(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/autograd/graph.py", line 869, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

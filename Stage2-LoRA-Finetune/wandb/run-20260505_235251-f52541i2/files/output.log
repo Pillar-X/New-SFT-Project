@@ -1,0 +1,120 @@
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 199/199 [07:26<00:00,  2.24s/it]
+{'loss': '0.7475', 'grad_norm': '0.8414', 'learning_rate': '1.328e-05', 'epoch': '0.01997'}
+{'loss': '0.7517', 'grad_norm': '0.6814', 'learning_rate': '1.314e-05', 'epoch': '0.03994'}
+{'loss': '0.6512', 'grad_norm': '0.7159', 'learning_rate': '1.283e-05', 'epoch': '0.05991'}
+{'loss': '0.6791', 'grad_norm': '0.6197', 'learning_rate': '1.236e-05', 'epoch': '0.07988'}
+{'loss': '0.6257', 'grad_norm': '0.5375', 'learning_rate': '1.173e-05', 'epoch': '0.09985'}
+{'loss': '0.6957', 'grad_norm': '0.5656', 'learning_rate': '1.097e-05', 'epoch': '0.1198'}
+{'loss': '0.5615', 'grad_norm': '0.6337', 'learning_rate': '1.009e-05', 'epoch': '0.1398'}
+{'loss': '0.6544', 'grad_norm': '0.6074', 'learning_rate': '9.127e-06', 'epoch': '0.1598'}
+{'loss': '0.6767', 'grad_norm': '0.6733', 'learning_rate': '8.095e-06', 'epoch': '0.1797'}
+{'loss': '0.6201', 'grad_norm': '0.5936', 'learning_rate': '7.025e-06', 'epoch': '0.1997'}
+{'loss': '0.5925', 'grad_norm': '0.53', 'learning_rate': '5.945e-06', 'epoch': '0.2197'}
+{'loss': '0.6054', 'grad_norm': '0.608', 'learning_rate': '4.883e-06', 'epoch': '0.2396'}
+{'loss': '0.6031', 'grad_norm': '0.6375', 'learning_rate': '3.868e-06', 'epoch': '0.2596'}
+{'loss': '0.6063', 'grad_norm': '0.5957', 'learning_rate': '2.926e-06', 'epoch': '0.2796'}
+{'loss': '0.573', 'grad_norm': '0.6428', 'learning_rate': '2.082e-06', 'epoch': '0.2996'}
+{'loss': '0.5625', 'grad_norm': '0.5298', 'learning_rate': '1.36e-06', 'epoch': '0.3195'}
+{'loss': '0.6234', 'grad_norm': '0.678', 'learning_rate': '7.769e-07', 'epoch': '0.3395'}
+{'loss': '0.5938', 'grad_norm': '0.4935', 'learning_rate': '3.491e-07', 'epoch': '0.3595'}
+{'loss': '0.568', 'grad_norm': '0.6684', 'learning_rate': '8.786e-08', 'epoch': '0.3794'}
+{'train_runtime': '449', 'train_samples_per_second': '7.091', 'train_steps_per_second': '0.443', 'train_loss': '0.6318', 'epoch': '0.3974'}
+[transformers] `use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+[transformers] Caching is incompatible with gradient checkpointing in Qwen3DecoderLayer. Setting `past_key_values=None`.
+[32m[I 2026-05-06 00:05:07,476][0m Trial 1 finished with value: 0.0 and parameters: {'learning_rate': 1.329291894316217e-05}. Best is trial 1 with value: 0.0.[0m
+Loading weights: 100%|██████████████████████████████████████████████████████████████████████████████████████████| 310/310 [00:00<00:00, 9274.60it/s]
+[transformers] warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 199/199 [07:27<00:00,  2.25s/it]
+{'loss': '0.6724', 'grad_norm': '0.6099', 'learning_rate': '0.000711', 'epoch': '0.01997'}
+{'loss': '0.631', 'grad_norm': '0.438', 'learning_rate': '0.0007035', 'epoch': '0.03994'}
+{'loss': '0.5567', 'grad_norm': '0.5049', 'learning_rate': '0.0006868', 'epoch': '0.05991'}
+{'loss': '0.5977', 'grad_norm': '0.4134', 'learning_rate': '0.0006613', 'epoch': '0.07988'}
+{'loss': '0.5693', 'grad_norm': '0.3933', 'learning_rate': '0.0006278', 'epoch': '0.09985'}
+{'loss': '0.6382', 'grad_norm': '0.4251', 'learning_rate': '0.0005871', 'epoch': '0.1198'}
+{'loss': '0.5156', 'grad_norm': '0.4398', 'learning_rate': '0.0005402', 'epoch': '0.1398'}
+{'loss': '0.6109', 'grad_norm': '0.4803', 'learning_rate': '0.0004885', 'epoch': '0.1598'}
+{'loss': '0.6285', 'grad_norm': '0.4437', 'learning_rate': '0.0004333', 'epoch': '0.1797'}
+{'loss': '0.5779', 'grad_norm': '0.4293', 'learning_rate': '0.000376', 'epoch': '0.1997'}
+{'loss': '0.547', 'grad_norm': '0.3794', 'learning_rate': '0.0003182', 'epoch': '0.2197'}
+{'loss': '0.5515', 'grad_norm': '0.3987', 'learning_rate': '0.0002613', 'epoch': '0.2396'}
+{'loss': '0.5556', 'grad_norm': '0.4023', 'learning_rate': '0.000207', 'epoch': '0.2596'}
+{'loss': '0.5551', 'grad_norm': '0.4137', 'learning_rate': '0.0001566', 'epoch': '0.2796'}
+{'loss': '0.5141', 'grad_norm': '0.4265', 'learning_rate': '0.0001115', 'epoch': '0.2996'}
+{'loss': '0.5043', 'grad_norm': '0.3675', 'learning_rate': '7.278e-05', 'epoch': '0.3195'}
+{'loss': '0.5722', 'grad_norm': '0.436', 'learning_rate': '4.158e-05', 'epoch': '0.3395'}
+{'loss': '0.5369', 'grad_norm': '0.3116', 'learning_rate': '1.868e-05', 'epoch': '0.3595'}
+{'loss': '0.524', 'grad_norm': '0.4158', 'learning_rate': '4.702e-06', 'epoch': '0.3794'}
+{'train_runtime': '447.3', 'train_samples_per_second': '7.118', 'train_steps_per_second': '0.445', 'train_loss': '0.5723', 'epoch': '0.3974'}
+[32m[I 2026-05-06 00:17:33,861][0m Trial 2 finished with value: 0.0 and parameters: {'learning_rate': 0.0007114476009343421}. Best is trial 1 with value: 0.0.[0m
+Loading weights: 100%|█████████████████████████████████████████████████████████████████████████████████████████| 310/310 [00:00<00:00, 10232.91it/s]
+[transformers] warmup_ratio is deprecated and will be removed in v5.2. Use `warmup_steps` instead.
+  7%|███████▋                                                                                                      | 14/199 [00:31<07:07,  2.31s/it][33m[W 2026-05-06 00:18:14,000][0m Trial 3 failed with parameters: {'learning_rate': 0.000157029708840554} because of the following error: KeyboardInterrupt().[0m
+{'loss': '0.6988', 'grad_norm': '0.5958', 'learning_rate': '0.0001569', 'epoch': '0.01997'}
+Traceback (most recent call last):
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+                      ^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 172, in objective
+    train_result = trainer.train()
+                   ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1427, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1509, in _inner_training_loop
+    self._run_epoch(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1737, in _run_epoch
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1937, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/accelerate/accelerator.py", line 2834, in backward
+    self.scaler.scale(loss).backward(**kwargs)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/_tensor.py", line 631, in backward
+    torch.autograd.backward(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/autograd/__init__.py", line 381, in backward
+    _engine_run_backward(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/autograd/graph.py", line 869, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+[33m[W 2026-05-06 00:18:14,002][0m Trial 3 failed with value None.[0m
+Traceback (most recent call last):
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 236, in <module>
+    main()
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 210, in main
+    study.optimize(objective, n_trials=args.n_trials)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/study.py", line 490, in optimize
+    _optimize(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 68, in _optimize
+    _optimize_sequential(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 165, in _optimize_sequential
+    frozen_trial_id = _run_trial(study, func, catch)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 263, in _run_trial
+    raise func_err
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/optuna/study/_optimize.py", line 206, in _run_trial
+    value_or_values = func(trial)
+                      ^^^^^^^^^^^
+  File "/home/pillar/projects_linux/new-SFT-project/Stage2-LoRA-Finetune/scripts/05_tpe_search.py", line 172, in objective
+    train_result = trainer.train()
+                   ^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1427, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1509, in _inner_training_loop
+    self._run_epoch(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1737, in _run_epoch
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/transformers/trainer.py", line 1937, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/accelerate/accelerator.py", line 2834, in backward
+    self.scaler.scale(loss).backward(**kwargs)
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/_tensor.py", line 631, in backward
+    torch.autograd.backward(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/autograd/__init__.py", line 381, in backward
+    _engine_run_backward(
+  File "/home/pillar/miniconda3/envs/sft_project/lib/python3.11/site-packages/torch/autograd/graph.py", line 869, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt

@@ -1,0 +1,12 @@
+pyyaml>=6.0
+python-dotenv>=1.0
+requests>=2.31
+tqdm>=4.66
+torch>=2.2
+transformers>=4.40,<5
+datasets>=2.19
+peft>=0.11
+accelerate>=0.29
+wandb>=0.17
+optuna>=3.6
+ray>=2.20

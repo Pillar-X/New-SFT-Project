@@ -1,0 +1,95 @@
+project:
+  name: project_name
+  seed: 42
+
+paths:
+  raw_data: data/raw/input.jsonl
+  interim_dir: data/interim
+  processed_dir: data/processed
+  output_dir: outputs
+  log_dir: logs
+
+model:
+  name: Qwen/Qwen2.5-0.5B-Instruct
+  base_url: http://localhost:8000/v1
+  api_key: dummy
+  temperature: 0.2
+  max_tokens: 1024
+
+processing:
+  max_samples: null
+  batch_size: 16
+
+validation:
+  min_question_length: 5
+  min_answer_length: 5
+  require_final_answer: false
+
+finetune:
+  model_path: models/Qwen3-0.6B-Base
+  dataset_path: data/sft/sft_boxed_small.json
+  output_dir: outputs/qwen3-0.6b-lora
+  logging_dir: logs
+  max_seq_length: 512
+  eval_split_ratio: 0.1
+  use_wandb: true
+  run_name: qwen3-0.6b-lora-sft-small-ray-dual-gpu
+  dtype: auto
+  bf16: false
+  fp16: true
+  gradient_checkpointing: true
+  dataloader_num_workers: 2
+  per_device_train_batch_size: 64
+  per_device_eval_batch_size: 64
+  gradient_accumulation_steps: 8
+  learning_rate: 0.0002
+  num_train_epochs: 2
+  lr_scheduler_type: cosine
+  warmup_ratio: 0.03
+  logging_steps: 10
+  save_steps: 100
+  eval_steps: 100
+  save_total_limit: 3
+  lora:
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    bias: none
+    target_modules:
+      - q_proj
+      - k_proj
+      - v_proj
+      - o_proj
+      - gate_proj
+      - up_proj
+      - down_proj
+  wandb:
+    project: stage2-qwen3-lora
+    entity: ""
+    name: qwen3-0.6b-lora-superparameter_search
+
+evaluation:
+  test_data_path: data/eval/valid_800.jsonl
+  sample_size: 128
+  every_n_steps: 200
+  seed: 42
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  enable_during_training: true
+  async_backend: ray
+  ray:
+    address: null
+    eval_device: cuda:1
+    max_pending_jobs: 1
+
+hparam_search:
+  method: tpe
+  target_metric: boxed_accuracy
+  trial_max_steps: 199
+  disable_train_time_boxed_eval: true
+  search_space:
+    learning_rate:
+      min: 1e-6
+      max: 1e-3
+      log: true
