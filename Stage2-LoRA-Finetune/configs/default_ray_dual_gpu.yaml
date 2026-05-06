@@ -50,7 +50,7 @@ finetune:
   warmup_ratio: 0.03
   logging_steps: 10
   save_steps: 100
-  eval_steps: 10
+  eval_steps: 50
   save_total_limit: 3
   lora_checkpoint_symlinks: true
   lora:
