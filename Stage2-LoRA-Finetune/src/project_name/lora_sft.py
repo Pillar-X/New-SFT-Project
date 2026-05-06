@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from collections import deque
 from datetime import datetime
@@ -730,6 +731,10 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                 progress_log_every = None if pe <= 0 else pe
             started_ray = False
             if not ray.is_initialized():
+                # Keep runtime_env CUDA_VISIBLE_DEVICES for num_gpus=0 Ray tasks.
+                # Otherwise Ray may override accelerator env vars to empty and
+                # async eval workers will see "No CUDA GPUs are available".
+                os.environ.setdefault("RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO", "0")
                 ray.init(
                     address=ray_cfg.get("address"),
                     ignore_reinit_error=True,
