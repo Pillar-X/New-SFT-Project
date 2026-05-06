@@ -86,7 +86,7 @@ evaluation:
     address: null
     eval_device: cuda:1
     max_pending_jobs: 1
-    progress_every_rows: 10
+    progress_every_rows: null
 
 hparam_search:
   method: tpe

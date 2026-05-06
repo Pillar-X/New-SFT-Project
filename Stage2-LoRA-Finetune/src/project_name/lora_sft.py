@@ -514,6 +514,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
 class AvgLossCallback(TrainerCallback):
     def __init__(self, window_size: int = 50) -> None:
         self.window_size = window_size
+        self.metric_name = f"avg_loss_{window_size}"
         self.loss_window: deque[float] = deque(maxlen=window_size)
 
     def on_log(
@@ -534,10 +535,10 @@ class AvgLossCallback(TrainerCallback):
         loss_float = float(loss_value)
         self.loss_window.append(loss_float)
         avg_loss = sum(self.loss_window) / len(self.loss_window)
-        logs["avg_loss_50"] = avg_loss
+        logs[self.metric_name] = avg_loss
         print(
             f"[train-metric] step={int(state.global_step)} "
-            f"loss={loss_float:.6f} avg_loss_50={avg_loss:.6f} "
+            f"loss={loss_float:.6f} {self.metric_name}={avg_loss:.6f} "
             f"window={len(self.loss_window)}"
         )
         return control
@@ -725,7 +726,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
     )
 
     callbacks: list[TrainerCallback] = []
-    callbacks.append(AvgLossCallback(window_size=50))
+    callbacks.append(AvgLossCallback(window_size=10))
     stamp = str(ft_cfg.get("_lora_run_stamp", "")).strip()
     if stamp and bool(ft_cfg.get("lora_checkpoint_symlinks", False)):
         callbacks.append(
@@ -742,7 +743,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     "evaluation.async_backend=ray requires ray. Install with: pip install ray"
                 )
             ray_cfg = eval_cfg.get("ray", {})
-            raw_progress = ray_cfg.get("progress_every_rows", 10)
+            raw_progress = ray_cfg.get("progress_every_rows")
             if raw_progress is None:
                 progress_log_every = None
             else:
