@@ -1,0 +1,27 @@
+project:
+  name: project_name
+  seed: 42
+
+paths:
+  raw_data: data/raw/input.jsonl
+  interim_dir: data/interim
+  processed_dir: data/processed
+  output_dir: outputs
+  log_dir: logs
+
+model:
+  name: Qwen/Qwen2.5-0.5B-Instruct
+  base_url: http://localhost:8000/v1
+  api_key: dummy
+  temperature: 0.2
+  max_tokens: 1024
+
+processing:
+  max_samples: null
+  batch_size: 16
+
+validation:
+  min_question_length: 5
+  min_answer_length: 5
+  require_final_answer: false
+
