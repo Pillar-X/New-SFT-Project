@@ -352,6 +352,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         self.snapshot_root = self.output_dir / "async_eval_snapshots"
         self.report_root = self.output_dir / "boxed_eval_reports"
         self.pending_jobs: list[tuple[Any, int, Path]] = []
+        self.submitted_steps: set[int] = set()
         self.remote_eval = ray.remote(num_cpus=1)(_evaluate_checkpoint_boxed_accuracy)
 
     def _collect_finished_jobs(self) -> None:
@@ -419,6 +420,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             eval_batch_size=self.eval_batch_size,
         )
         self.pending_jobs.append((ref, step, snapshot_dir))
+        self.submitted_steps.add(step)
         print(
             f"[boxed-eval][ray] submitted step={step} "
             f"pending_jobs={len(self.pending_jobs)} snapshot={snapshot_dir} "
@@ -476,10 +478,19 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         args: TrainingArguments,
         state: TrainerState,
         control: TrainerControl,
+        model: AutoModelForCausalLM | None = None,
         **kwargs: Any,
     ) -> TrainerControl:
         if args.process_index != 0:
             return control
+        final_step = int(state.global_step)
+        if model is not None and final_step > 0 and final_step not in self.submitted_steps:
+            self._collect_finished_jobs()
+            print(
+                f"[boxed-eval][ray] submit final_step={final_step} "
+                "(not aligned with every_n_steps)"
+            )
+            self._submit_job(model=model, step=final_step)
         while self.pending_jobs:
             ref, step, snapshot_dir = self.pending_jobs.pop(0)
             try:
