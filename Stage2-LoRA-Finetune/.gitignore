@@ -33,3 +33,7 @@ data/eval/*
 !data/sft/.gitkeep
 !data/train/.gitkeep
 !data/eval/.gitkeep
+
+# Others
+.Identifiers
+models/*
