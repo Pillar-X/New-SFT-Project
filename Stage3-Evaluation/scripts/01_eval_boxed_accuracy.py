@@ -62,6 +62,8 @@ def main() -> None:
     report = evaluate_boxed_accuracy(
         items=items,
         generate_fn=client.generate,
+        concurrent_requests=int(eval_cfg.get("concurrent_requests", 1)),
+        progress_every_requests=eval_cfg.get("progress_every_requests", 100),
         progress_every_rows=eval_cfg.get("progress_every_rows"),
     )
 

@@ -53,7 +53,7 @@ python scripts/01_eval_boxed_accuracy.py --config configs/default.yaml
 1. `00_serve_vllm.py` reads config and launches vLLM with:
    - `--model <base_model_path>`
    - `--enable-lora --lora-modules <alias>=<lora_path>`
-2. `01_eval_boxed_accuracy.py` sends eval prompts to `/v1/chat/completions`.
+2. `01_eval_boxed_accuracy.py` sends concurrent eval prompts to `/v1/chat/completions`.
 3. Responses are parsed with boxed extraction and answer matching.
 4. Final metrics and row-level samples are persisted under `evaluation/boxed-eval-<timestamp>/`.
 
@@ -70,5 +70,6 @@ Each run directory under `evaluation/` contains:
 
 - Start vLLM service first, then run evaluation.
 - Ensure `model.served_model_name` in config matches the serving side.
+- Throughput knobs: `vllm.tensor_parallel_size` and `evaluation.concurrent_requests`.
 - If you change code or config defaults, update this README accordingly.
 

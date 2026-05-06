@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 import json
 import random
 import re
@@ -129,15 +130,59 @@ def evaluate_boxed_accuracy(
     items: list[EvalItem],
     generate_fn: Callable[[str], str],
     *,
+    concurrent_requests: int = 1,
+    progress_every_requests: int | None = 100,
     progress_every_rows: int | None = 50,
 ) -> dict[str, Any]:
+    max_workers = max(1, int(concurrent_requests))
+    total_requests = len(items) + sum(1 for x in items if x.seed_question)
+    response_map: dict[tuple[int, str], str] = {}
+
+    def _run_all_requests() -> None:
+        nonlocal response_map
+        if max_workers == 1:
+            done = 0
+            for idx, item in enumerate(items):
+                response_map[(idx, "question")] = generate_fn(item.question)
+                done += 1
+                if progress_every_requests and done % progress_every_requests == 0:
+                    print(f"[boxed-eval] request_progress={done}/{total_requests}", flush=True)
+                if item.seed_question:
+                    response_map[(idx, "seed")] = generate_fn(item.seed_question)
+                    done += 1
+                    if progress_every_requests and done % progress_every_requests == 0:
+                        print(f"[boxed-eval] request_progress={done}/{total_requests}", flush=True)
+            return
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_map: dict[Future[str], tuple[int, str]] = {}
+            for idx, item in enumerate(items):
+                future_map[executor.submit(generate_fn, item.question)] = (idx, "question")
+                if item.seed_question:
+                    future_map[executor.submit(generate_fn, item.seed_question)] = (idx, "seed")
+
+            done = 0
+            for future in as_completed(future_map):
+                idx, req_type = future_map[future]
+                try:
+                    response_map[(idx, req_type)] = future.result()
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"vLLM request failed at idx={idx}, type={req_type}"
+                    ) from exc
+                done += 1
+                if progress_every_requests and done % progress_every_requests == 0:
+                    print(f"[boxed-eval] request_progress={done}/{total_requests}", flush=True)
+
+    _run_all_requests()
+
     results: list[dict[str, Any]] = []
     question_correct = 0
     seed_correct = 0
     seed_total = 0
 
     for idx, item in enumerate(items):
-        question_response = generate_fn(item.question)
+        question_response = response_map[(idx, "question")]
         question_pred_boxed = extract_boxed_content(question_response)
         question_is_correct = answers_match(question_pred_boxed, item.gold_answer)
         question_correct += int(question_is_correct)
@@ -147,7 +192,7 @@ def evaluate_boxed_accuracy(
         seed_is_correct = None
         if item.seed_question:
             seed_total += 1
-            seed_response = generate_fn(item.seed_question)
+            seed_response = response_map[(idx, "seed")]
             seed_pred_boxed = extract_boxed_content(seed_response)
             seed_is_correct = answers_match(seed_pred_boxed, item.seed_answer)
             seed_correct += int(seed_is_correct)

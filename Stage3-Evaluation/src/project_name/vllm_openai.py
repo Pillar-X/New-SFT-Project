@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from typing import Any
 
 import requests
@@ -24,12 +25,20 @@ class VllmOpenAIClient:
         self.temperature = temperature
         self.do_sample = do_sample
         self.timeout_seconds = timeout_seconds
+        self._tls = threading.local()
 
     def _headers(self) -> dict[str, str]:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
+
+    def _session(self) -> requests.Session:
+        session = getattr(self._tls, "session", None)
+        if session is None:
+            session = requests.Session()
+            self._tls.session = session
+        return session
 
     def generate(self, prompt: str) -> str:
         payload: dict[str, Any] = {
@@ -39,7 +48,7 @@ class VllmOpenAIClient:
             "temperature": self.temperature if self.do_sample else 0.0,
             "stream": False,
         }
-        response = requests.post(
+        response = self._session().post(
             f"{self.base_url}/chat/completions",
             json=payload,
             headers=self._headers(),
