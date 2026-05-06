@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from collections import deque
 from datetime import datetime
@@ -73,12 +74,49 @@ def _evaluate_checkpoint_boxed_accuracy(
 ) -> dict[str, Any]:
     items = load_eval_items(test_data_path)
     sampled = sample_eval_items(items=items, sample_size=sample_size, seed=seed + step)
-    model, tokenizer = load_model_and_tokenizer(
-        model_path=model_path,
-        adapter_path=adapter_path,
-        dtype=dtype,
-        device=device,
-    )
+    requested_device = device
+    candidate_devices: list[str] = [requested_device]
+    if requested_device.startswith("cuda:") and requested_device != "cuda:0":
+        candidate_devices.append("cuda:0")
+
+    model = None
+    tokenizer = None
+    actual_device = requested_device
+    last_error: Exception | None = None
+
+    for candidate in candidate_devices:
+        try:
+            mapped_device = candidate
+            # Ray task may hide all accelerators for num_gpus=0. Make the target
+            # physical GPU visible, then use local cuda:0 in this subprocess.
+            if candidate.startswith("cuda:"):
+                gpu_idx = int(candidate.split(":", maxsplit=1)[1])
+                os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_idx)
+                mapped_device = "cuda:0"
+
+            model, tokenizer = load_model_and_tokenizer(
+                model_path=model_path,
+                adapter_path=adapter_path,
+                dtype=dtype,
+                device=mapped_device,
+            )
+            actual_device = candidate
+            if candidate != requested_device:
+                print(
+                    f"[boxed-eval][ray] fallback device applied: "
+                    f"requested={requested_device} actual={actual_device}"
+                )
+            break
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            continue
+
+    if model is None or tokenizer is None:
+        raise RuntimeError(
+            f"Failed to load eval model on devices {candidate_devices}; "
+            f"last_error={last_error}"
+        )
+
     with torch.no_grad():
         report = evaluate_boxed_accuracy(
             model=model,
@@ -89,7 +127,7 @@ def _evaluate_checkpoint_boxed_accuracy(
             do_sample=do_sample,
         )
     del model
-    if device.startswith("cuda") and torch.cuda.is_available():
+    if actual_device.startswith("cuda") and torch.cuda.is_available():
         torch.cuda.empty_cache()
 
     out_dir = Path(report_dir)
@@ -107,6 +145,7 @@ def _evaluate_checkpoint_boxed_accuracy(
         "combined_total": report["combined_total"],
         "report_path": str(out_file),
         "adapter_path": adapter_path,
+        "eval_device_used": actual_device,
     }
 
 
