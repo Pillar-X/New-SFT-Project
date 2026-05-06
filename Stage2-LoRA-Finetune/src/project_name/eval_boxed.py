@@ -207,6 +207,9 @@ def evaluate_boxed_accuracy(
     max_new_tokens: int,
     temperature: float,
     do_sample: bool,
+    *,
+    progress_log_every: int | None = None,
+    progress_label: str = "",
 ) -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     question_correct = 0
@@ -258,6 +261,24 @@ def evaluate_boxed_accuracy(
                 "seed_is_correct": seed_is_correct,
             }
         )
+
+        if progress_log_every is not None and progress_log_every > 0:
+            done_rows = idx + 1
+            at_interval = done_rows % progress_log_every == 0
+            at_end = done_rows == len(items) and (len(items) % progress_log_every != 0)
+            if at_interval or at_end:
+                n_rows = done_rows
+                run_q = question_correct / n_rows if n_rows else 0.0
+                run_s = seed_correct / seed_total if seed_total else 0.0
+                denom = n_rows + seed_total
+                run_c = (question_correct + seed_correct) / denom if denom else 0.0
+                tag = f" {progress_label}" if progress_label else ""
+                print(
+                    f"[boxed-eval]{tag} progress rows={n_rows}/{len(items)} "
+                    f"running_q_acc={run_q:.4f} running_seed_acc={run_s:.4f} "
+                    f"running_combined_acc={run_c:.4f}",
+                    flush=True,
+                )
 
     question_total = len(items)
     question_accuracy = question_correct / question_total if question_total else 0.0

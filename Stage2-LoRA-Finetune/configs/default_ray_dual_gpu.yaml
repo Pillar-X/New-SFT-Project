@@ -50,8 +50,9 @@ finetune:
   warmup_ratio: 0.03
   logging_steps: 10
   save_steps: 100
-  eval_steps: 100
+  eval_steps: 10
   save_total_limit: 3
+  lora_checkpoint_symlinks: true
   lora:
     r: 16
     lora_alpha: 32
@@ -73,7 +74,7 @@ finetune:
 evaluation:
   test_data_path: data/eval/valid_800.jsonl
   sample_size: 50
-  every_n_steps: 200
+  every_n_steps: 50
   seed: 42
   max_new_tokens: 512
   temperature: 0.0
@@ -84,6 +85,7 @@ evaluation:
     address: null
     eval_device: cuda:1
     max_pending_jobs: 1
+    progress_every_rows: 10
 
 hparam_search:
   method: tpe

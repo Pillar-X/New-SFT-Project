@@ -76,6 +76,15 @@ def main() -> None:
     trainer.save_model()
     tokenizer.save_pretrained(trainer.args.output_dir)
 
+    ft_cfg = config["finetune"]
+    stamp = str(ft_cfg.get("_lora_run_stamp", "")).strip()
+    if stamp and bool(ft_cfg.get("lora_checkpoint_symlinks", False)):
+        gs = int(trainer.state.global_step)
+        final_named = Path(trainer.args.output_dir) / f"lora-{stamp}-step-{gs}-final"
+        trainer.save_model(str(final_named))
+        tokenizer.save_pretrained(str(final_named))
+        print(f"LoRA named copy (final): {final_named}")
+
     metrics = train_result.metrics
     trainer.log_metrics("train", metrics)
     trainer.save_metrics("train", metrics)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from collections import deque
 from datetime import datetime
@@ -49,12 +48,50 @@ def _resolve_output_dir(ft_cfg: dict[str, Any]) -> str:
     """Append a wall-clock timestamp so repeated runs do not overwrite adapters."""
     base = Path(str(ft_cfg["output_dir"]))
     if not bool(ft_cfg.get("timestamp_output_dir", True)):
+        ft_cfg["_lora_run_stamp"] = ""
         return str(base)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    ft_cfg["_lora_run_stamp"] = stamp
     resolved = base.parent / f"{base.name}-{stamp}"
     out = str(resolved)
     print(f"[output-dir] {base} -> {out}")
     return out
+
+
+class LoraCheckpointStampAliasCallback(TrainerCallback):
+    """Create ``lora-<stamp>-step-<N>`` symlink next to each ``checkpoint-<N>`` (same parent dir)."""
+
+    def __init__(self, *, output_dir: str, stamp: str) -> None:
+        self.output_dir = Path(output_dir)
+        self.stamp = stamp
+
+    def on_save(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        **kwargs: Any,
+    ) -> TrainerControl:
+        if args.process_index != 0:
+            return control
+        step = int(state.global_step)
+        src = self.output_dir / f"checkpoint-{step}"
+        if not src.is_dir():
+            return control
+        dst = self.output_dir / f"lora-{self.stamp}-step-{step}"
+        if dst.is_symlink():
+            dst.unlink()
+        elif dst.is_file():
+            dst.unlink()
+        elif dst.is_dir():
+            shutil.rmtree(dst)
+        try:
+            dst.symlink_to(src.name, target_is_directory=True)
+        except OSError as exc:
+            print(f"[lora-alias] symlink failed ({exc}); copying tree instead.")
+            shutil.copytree(src, dst)
+        print(f"[lora-alias] {dst.name} -> {src.name}")
+        return control
 
 
 def _evaluate_checkpoint_boxed_accuracy(
@@ -71,51 +108,17 @@ def _evaluate_checkpoint_boxed_accuracy(
     do_sample: bool,
     device: str,
     report_dir: str,
+    eval_device_label: str,
+    progress_log_every: int | None,
 ) -> dict[str, Any]:
     items = load_eval_items(test_data_path)
     sampled = sample_eval_items(items=items, sample_size=sample_size, seed=seed + step)
-    requested_device = device
-    candidate_devices: list[str] = [requested_device]
-    if requested_device.startswith("cuda:") and requested_device != "cuda:0":
-        candidate_devices.append("cuda:0")
-
-    model = None
-    tokenizer = None
-    actual_device = requested_device
-    last_error: Exception | None = None
-
-    for candidate in candidate_devices:
-        try:
-            mapped_device = candidate
-            # Ray task may hide all accelerators for num_gpus=0. Make the target
-            # physical GPU visible, then use local cuda:0 in this subprocess.
-            if candidate.startswith("cuda:"):
-                gpu_idx = int(candidate.split(":", maxsplit=1)[1])
-                os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_idx)
-                mapped_device = "cuda:0"
-
-            model, tokenizer = load_model_and_tokenizer(
-                model_path=model_path,
-                adapter_path=adapter_path,
-                dtype=dtype,
-                device=mapped_device,
-            )
-            actual_device = candidate
-            if candidate != requested_device:
-                print(
-                    f"[boxed-eval][ray] fallback device applied: "
-                    f"requested={requested_device} actual={actual_device}"
-                )
-            break
-        except Exception as exc:  # noqa: BLE001
-            last_error = exc
-            continue
-
-    if model is None or tokenizer is None:
-        raise RuntimeError(
-            f"Failed to load eval model on devices {candidate_devices}; "
-            f"last_error={last_error}"
-        )
+    model, tokenizer = load_model_and_tokenizer(
+        model_path=model_path,
+        adapter_path=adapter_path,
+        dtype=dtype,
+        device=device,
+    )
 
     with torch.no_grad():
         report = evaluate_boxed_accuracy(
@@ -125,9 +128,11 @@ def _evaluate_checkpoint_boxed_accuracy(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             do_sample=do_sample,
+            progress_log_every=progress_log_every,
+            progress_label=f"[ray step={step}]",
         )
     del model
-    if actual_device.startswith("cuda") and torch.cuda.is_available():
+    if device.startswith("cuda") and torch.cuda.is_available():
         torch.cuda.empty_cache()
 
     out_dir = Path(report_dir)
@@ -145,8 +150,39 @@ def _evaluate_checkpoint_boxed_accuracy(
         "combined_total": report["combined_total"],
         "report_path": str(out_file),
         "adapter_path": adapter_path,
-        "eval_device_used": actual_device,
+        "eval_device_used": eval_device_label,
     }
+
+
+def _ray_boxed_eval_launch_plan(eval_device: str) -> tuple[dict[str, Any] | None, str, str]:
+    """Pick Ray runtime_env + torch device for the async boxed-eval worker.
+
+    Returns ``(runtime_env, torch_device, eval_device_label)`` where ``torch_device`` is
+    what ``load_model_and_tokenizer(..., device=...)`` should receive inside the Ray task.
+    """
+    raw = str(eval_device).strip()
+    lowered = raw.lower()
+    if lowered in {"", "cpu"}:
+        return None, "cpu", "cpu"
+    if not lowered.startswith("cuda:"):
+        raise ValueError(f"Unsupported evaluation.ray.eval_device: {eval_device}")
+    want_idx = int(lowered.split(":", maxsplit=1)[1])
+    n = torch.cuda.device_count()
+    if n <= 0:
+        return None, "cpu", "cpu"
+    if want_idx >= n:
+        print(
+            f"[boxed-eval][ray] eval_device={raw} but only {n} CUDA device(s) are visible "
+            "to the trainer process; falling back to cuda:0 for eval."
+        )
+        return {"env_vars": {"CUDA_VISIBLE_DEVICES": "0"}}, "cuda:0", "cuda:0"
+    if n == 1:
+        print(
+            f"[boxed-eval][ray] eval_device={raw} but only one CUDA device is visible "
+            "(often because CUDA_VISIBLE_DEVICES exposes a single GPU); eval shares cuda:0."
+        )
+        return None, "cuda:0", "cuda:0"
+    return {"env_vars": {"CUDA_VISIBLE_DEVICES": str(want_idx)}}, "cuda:0", raw
 
 
 class BoxedEvalCallback(TrainerCallback):
@@ -287,6 +323,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         eval_device: str,
         max_pending_jobs: int,
         shutdown_ray_on_end: bool,
+        progress_log_every: int | None,
     ) -> None:
         if ray is None:
             raise ImportError("ray is required for async Ray evaluation. Install with: pip install ray")
@@ -303,6 +340,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         self.do_sample = do_sample
         self.eval_device = eval_device
         self.shutdown_ray_on_end = shutdown_ray_on_end
+        self.progress_log_every = progress_log_every
         self.snapshot_root = self.output_dir / "async_eval_snapshots"
         self.report_root = self.output_dir / "boxed_eval_reports"
         self.pending_jobs: list[tuple[Any, int, Path]] = []
@@ -332,6 +370,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                     f"question_acc={result['question_accuracy']:.4f} "
                     f"seed_acc={result['seed_accuracy']:.4f} "
                     f"combined_acc={result['combined_accuracy']:.4f} "
+                    f"device={result.get('eval_device_used')} "
                     f"report={result['report_path']}"
                 )
             except Exception as exc:
@@ -350,7 +389,11 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         shutil.rmtree(snapshot_dir, ignore_errors=True)
         snapshot_dir.mkdir(parents=True, exist_ok=True)
         model.save_pretrained(str(snapshot_dir))
-        ref = self.remote_eval.remote(
+        runtime_env, torch_device, eval_label = _ray_boxed_eval_launch_plan(self.eval_device)
+        remote_fn = self.remote_eval
+        if runtime_env is not None:
+            remote_fn = remote_fn.options(runtime_env=runtime_env)
+        ref = remote_fn.remote(
             step=step,
             model_path=self.model_path,
             adapter_path=str(snapshot_dir),
@@ -361,13 +404,16 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             max_new_tokens=self.max_new_tokens,
             temperature=self.temperature,
             do_sample=self.do_sample,
-            device=self.eval_device,
+            device=torch_device,
             report_dir=str(self.report_root),
+            eval_device_label=eval_label,
+            progress_log_every=self.progress_log_every,
         )
         self.pending_jobs.append((ref, step, snapshot_dir))
         print(
             f"[boxed-eval][ray] submitted step={step} "
-            f"pending_jobs={len(self.pending_jobs)} snapshot={snapshot_dir}"
+            f"pending_jobs={len(self.pending_jobs)} snapshot={snapshot_dir} "
+            f"eval_target={eval_label} torch_device={torch_device}"
         )
 
     def on_step_end(
@@ -434,6 +480,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                     f"question_acc={result['question_accuracy']:.4f} "
                     f"seed_acc={result['seed_accuracy']:.4f} "
                     f"combined_acc={result['combined_accuracy']:.4f} "
+                    f"device={result.get('eval_device_used')} "
                     f"report={result['report_path']}"
                 )
             except Exception as exc:
@@ -659,6 +706,11 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
 
     callbacks: list[TrainerCallback] = []
     callbacks.append(AvgLossCallback(window_size=50))
+    stamp = str(ft_cfg.get("_lora_run_stamp", "")).strip()
+    if stamp and bool(ft_cfg.get("lora_checkpoint_symlinks", False)):
+        callbacks.append(
+            LoraCheckpointStampAliasCallback(output_dir=str(ft_cfg["output_dir"]), stamp=stamp)
+        )
     eval_cfg = config.get("evaluation", {})
     test_data_path = eval_cfg.get("test_data_path")
     enable_train_time_boxed_eval = bool(eval_cfg.get("enable_during_training", True))
@@ -670,6 +722,12 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     "evaluation.async_backend=ray requires ray. Install with: pip install ray"
                 )
             ray_cfg = eval_cfg.get("ray", {})
+            raw_progress = ray_cfg.get("progress_every_rows", 10)
+            if raw_progress is None:
+                progress_log_every = None
+            else:
+                pe = int(raw_progress)
+                progress_log_every = None if pe <= 0 else pe
             started_ray = False
             if not ray.is_initialized():
                 ray.init(
@@ -693,6 +751,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     eval_device=str(ray_cfg.get("eval_device", "cuda:1")),
                     max_pending_jobs=_to_int(ray_cfg.get("max_pending_jobs", 1)),
                     shutdown_ray_on_end=started_ray,
+                    progress_log_every=progress_log_every,
                 )
             )
         else:

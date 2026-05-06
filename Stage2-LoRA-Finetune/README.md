@@ -175,6 +175,7 @@ evaluation:
     address: null
     eval_device: cuda:1
     max_pending_jobs: 1
+    progress_every_rows: 10  # Ray 评估每完成多少条样本打印一次进度（0 关闭）
 ```
 
 3. 启动训练：
@@ -187,6 +188,13 @@ python scripts/03_train_lora.py --config configs/default_ray_dual_gpu.yaml
 - 提交异步任务：`[boxed-eval][ray] submitted step=...`
 - 评估完成结果：`[boxed-eval][ray] step=... question_acc=... seed_acc=... combined_acc=...`
 - 训练开始前基线评估：`[boxed-eval] init_step=0 ...`（Ray 模式会提交 `step=0` 的异步评估任务）
+
+4. 第二块 GPU 总是不可用时的排查顺序：
+
+- **作业是否只申请了 1 张卡**：Slurm 等调度器里需要 `--gres=gpu:2`（或等价参数）；否则 `torch.cuda.device_count()` 在进程里只会是 1。
+- **`CUDA_VISIBLE_DEVICES` 是否只暴露了 1 张卡**：在训练同一个 shell 里执行 `echo $CUDA_VISIBLE_DEVICES`，应为 `0,1` 或未设置；若只有 `0`，则配置里的 `cuda:1` 在该进程中不存在。
+- **HuggingFace Trainer 是否在用多卡 DataParallel**：若进程能看到两张卡，Trainer 可能把两张卡都用于训练，导致第二卡被占满。此时可在外层用 `CUDA_VISIBLE_DEVICES=0` 只暴露训练卡（但第二卡要对 Ray 可见需调度器层面保证 Ray worker 能单独绑定物理卡；当前实现会在 Ray 任务上设置 `runtime_env.CUDA_VISIBLE_DEVICES` 来绑定 `eval_device`）。
+- **Ray 提示 `RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO`**：可设置 `export RAY_ACCEL_ENV_VAR_OVERRIDE_ON_ZERO=0` 再启动，减少环境变量覆盖带来的不确定性。
 
 ## 如何启动 TPE 参数搜索
 
