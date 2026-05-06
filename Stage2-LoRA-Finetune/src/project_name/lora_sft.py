@@ -111,6 +111,7 @@ def _evaluate_checkpoint_boxed_accuracy(
     report_dir: str,
     eval_device_label: str,
     progress_log_every: int | None,
+    eval_batch_size: int,
 ) -> dict[str, Any]:
     items = load_eval_items(test_data_path)
     sampled = sample_eval_items(items=items, sample_size=sample_size, seed=seed + step)
@@ -129,6 +130,7 @@ def _evaluate_checkpoint_boxed_accuracy(
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             do_sample=do_sample,
+            eval_batch_size=eval_batch_size,
             progress_log_every=progress_log_every,
             progress_label=f"[ray step={step}]",
         )
@@ -198,6 +200,7 @@ class BoxedEvalCallback(TrainerCallback):
         max_new_tokens: int,
         temperature: float,
         do_sample: bool,
+        eval_batch_size: int,
     ) -> None:
         self.tokenizer = tokenizer
         self.eval_items = eval_items
@@ -207,6 +210,7 @@ class BoxedEvalCallback(TrainerCallback):
         self.max_new_tokens = max_new_tokens
         self.temperature = temperature
         self.do_sample = do_sample
+        self.eval_batch_size = max(1, int(eval_batch_size))
 
     def _run_boxed_eval(
         self,
@@ -232,6 +236,7 @@ class BoxedEvalCallback(TrainerCallback):
                 max_new_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 do_sample=self.do_sample,
+                eval_batch_size=self.eval_batch_size,
             )
         if was_training:
             model.train()
@@ -325,6 +330,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         max_pending_jobs: int,
         shutdown_ray_on_end: bool,
         progress_log_every: int | None,
+        eval_batch_size: int,
     ) -> None:
         if ray is None:
             raise ImportError("ray is required for async Ray evaluation. Install with: pip install ray")
@@ -340,6 +346,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         self.temperature = temperature
         self.do_sample = do_sample
         self.eval_device = eval_device
+        self.eval_batch_size = max(1, int(eval_batch_size))
         self.shutdown_ray_on_end = shutdown_ray_on_end
         self.progress_log_every = progress_log_every
         self.snapshot_root = self.output_dir / "async_eval_snapshots"
@@ -409,6 +416,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             report_dir=str(self.report_root),
             eval_device_label=eval_label,
             progress_log_every=self.progress_log_every,
+            eval_batch_size=self.eval_batch_size,
         )
         self.pending_jobs.append((ref, step, snapshot_dir))
         print(
@@ -757,6 +765,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     max_pending_jobs=_to_int(ray_cfg.get("max_pending_jobs", 1)),
                     shutdown_ray_on_end=started_ray,
                     progress_log_every=progress_log_every,
+                    eval_batch_size=_to_int(eval_cfg.get("batch_size", 1)),
                 )
             )
         else:
@@ -771,6 +780,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     max_new_tokens=_to_int(eval_cfg.get("max_new_tokens", 256)),
                     temperature=_to_float(eval_cfg.get("temperature", 0.0)),
                     do_sample=bool(eval_cfg.get("do_sample", False)),
+                    eval_batch_size=_to_int(eval_cfg.get("batch_size", 1)),
                 )
             )
 

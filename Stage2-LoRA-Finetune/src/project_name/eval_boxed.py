@@ -141,6 +141,8 @@ def load_model_and_tokenizer(
     tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    # Decoder-only generation with padding is typically more stable with left padding.
+    tokenizer.padding_side = "left"
 
     dtype_map = {
         "auto": "auto",
@@ -174,15 +176,41 @@ def generate_response(
     temperature: float,
     do_sample: bool,
 ) -> str:
-    messages: list[dict[str, str]] = [
-        {"role": "user", "content": question},
-    ]
-    prompt_text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
+    responses = generate_responses(
+        model=model,
+        tokenizer=tokenizer,
+        questions=[question],
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        do_sample=do_sample,
     )
-    model_inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
+    return responses[0]
+
+
+def generate_responses(
+    model: AutoModelForCausalLM,
+    tokenizer: AutoTokenizer,
+    questions: list[str],
+    max_new_tokens: int,
+    temperature: float,
+    do_sample: bool,
+) -> list[str]:
+    if not questions:
+        return []
+    messages: list[dict[str, str]] = [
+        {"role": "user", "content": ""},
+    ]
+    prompt_texts: list[str] = []
+    for q in questions:
+        messages[0]["content"] = q
+        prompt_texts.append(
+            tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        )
+    model_inputs = tokenizer(prompt_texts, return_tensors="pt", padding=True).to(model.device)
 
     gen_kwargs: dict[str, Any] = {
         "max_new_tokens": max_new_tokens,
@@ -193,11 +221,15 @@ def generate_response(
     if do_sample:
         gen_kwargs["temperature"] = temperature
 
-    with torch.no_grad():
+    with torch.inference_mode():
         output_ids = model.generate(**model_inputs, **gen_kwargs)
 
-    generated_ids = output_ids[0][model_inputs["input_ids"].shape[1] :]
-    return tokenizer.decode(generated_ids, skip_special_tokens=True)
+    input_lens = model_inputs["attention_mask"].sum(dim=1).tolist()
+    decoded: list[str] = []
+    for i, out_ids in enumerate(output_ids):
+        generated_ids = out_ids[int(input_lens[i]) :]
+        decoded.append(tokenizer.decode(generated_ids, skip_special_tokens=True))
+    return decoded
 
 
 def evaluate_boxed_accuracy(
@@ -208,6 +240,7 @@ def evaluate_boxed_accuracy(
     temperature: float,
     do_sample: bool,
     *,
+    eval_batch_size: int = 1,
     progress_log_every: int | None = None,
     progress_label: str = "",
 ) -> dict[str, Any]:
@@ -216,54 +249,73 @@ def evaluate_boxed_accuracy(
     seed_correct = 0
     seed_total = 0
 
-    for idx, item in enumerate(items):
-        question_response = generate_response(
+    bs = max(1, int(eval_batch_size))
+    for start in range(0, len(items), bs):
+        chunk = items[start : start + bs]
+        question_responses = generate_responses(
             model=model,
             tokenizer=tokenizer,
-            question=item.question,
+            questions=[x.question for x in chunk],
             max_new_tokens=max_new_tokens,
             temperature=temperature,
             do_sample=do_sample,
         )
-        question_pred_boxed = extract_boxed_content(question_response)
-        question_is_correct = answers_match(question_pred_boxed, item.gold_answer)
-        question_correct += int(question_is_correct)
 
-        seed_response = None
-        seed_pred_boxed = None
-        seed_is_correct = None
-        if item.seed_question:
-            seed_total += 1
-            seed_response = generate_response(
+        seed_positions: list[int] = []
+        seed_questions: list[str] = []
+        for local_idx, item in enumerate(chunk):
+            if item.seed_question:
+                seed_positions.append(local_idx)
+                seed_questions.append(item.seed_question)
+                seed_total += 1
+
+        seed_response_by_pos: dict[int, str] = {}
+        if seed_questions:
+            seed_responses = generate_responses(
                 model=model,
                 tokenizer=tokenizer,
-                question=item.seed_question,
+                questions=seed_questions,
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
                 do_sample=do_sample,
             )
-            seed_pred_boxed = extract_boxed_content(seed_response)
-            seed_is_correct = answers_match(seed_pred_boxed, item.seed_answer)
-            seed_correct += int(seed_is_correct)
-
-        results.append(
-            {
-                "index": idx,
-                "question": item.question,
-                "gold_answer": item.gold_answer,
-                "question_model_response": question_response,
-                "question_pred_boxed": question_pred_boxed,
-                "question_is_correct": question_is_correct,
-                "seed_question": item.seed_question,
-                "seed_answer": item.seed_answer,
-                "seed_model_response": seed_response,
-                "seed_pred_boxed": seed_pred_boxed,
-                "seed_is_correct": seed_is_correct,
+            seed_response_by_pos = {
+                pos: response for pos, response in zip(seed_positions, seed_responses)
             }
-        )
+
+        for local_idx, item in enumerate(chunk):
+            idx = start + local_idx
+            question_response = question_responses[local_idx]
+            question_pred_boxed = extract_boxed_content(question_response)
+            question_is_correct = answers_match(question_pred_boxed, item.gold_answer)
+            question_correct += int(question_is_correct)
+
+            seed_response = seed_response_by_pos.get(local_idx)
+            seed_pred_boxed = extract_boxed_content(seed_response) if seed_response else None
+            seed_is_correct = (
+                answers_match(seed_pred_boxed, item.seed_answer) if seed_response is not None else None
+            )
+            if seed_is_correct is not None:
+                seed_correct += int(seed_is_correct)
+
+            results.append(
+                {
+                    "index": idx,
+                    "question": item.question,
+                    "gold_answer": item.gold_answer,
+                    "question_model_response": question_response,
+                    "question_pred_boxed": question_pred_boxed,
+                    "question_is_correct": question_is_correct,
+                    "seed_question": item.seed_question,
+                    "seed_answer": item.seed_answer,
+                    "seed_model_response": seed_response,
+                    "seed_pred_boxed": seed_pred_boxed,
+                    "seed_is_correct": seed_is_correct,
+                }
+            )
 
         if progress_log_every is not None and progress_log_every > 0:
-            done_rows = idx + 1
+            done_rows = min(start + len(chunk), len(items))
             at_interval = done_rows % progress_log_every == 0
             at_end = done_rows == len(items) and (len(items) % progress_log_every != 0)
             if at_interval or at_end:
