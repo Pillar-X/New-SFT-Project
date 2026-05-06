@@ -1,0 +1,3 @@
+# Large binaries / datasets — never commit (GitHub 100MB limit; huge clone/push cost)
+Qwen3-0.6B-Base/model.safetensors
+nv-community_Nemotron-CC-Math-v1_4plus_first100000.jsonl
