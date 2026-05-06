@@ -16,9 +16,10 @@ venv/
 .vscode/
 
 # Outputs
-logs/
-outputs/
-models/
+logs/*
+outputs/*
+models/*
+wandb/*
 
 # Data artifacts
 data/interim/*
@@ -26,6 +27,9 @@ data/processed/*
 data/sft/*
 data/train/*
 data/eval/*
+data/raw/*
+data/samples/*
+data/test/*
 
 # Keep folder structure
 !data/interim/.gitkeep
@@ -33,7 +37,13 @@ data/eval/*
 !data/sft/.gitkeep
 !data/train/.gitkeep
 !data/eval/.gitkeep
+!data/raw/.gitkeep
+!data/samples/.gitkeep
+!data/test/.gitkeep
+!logs/.gitkeep
+!outputs/.gitkeep
+!models/.gitkeep
+!wandb/.gitkeep
 
 # Others
 .Identifiers
-models/*
