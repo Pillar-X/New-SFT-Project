@@ -30,7 +30,11 @@ def parse_args() -> argparse.Namespace:
 
 def _setup_wandb_env(config: dict) -> None:
     ft_cfg = config["finetune"]
-    if not ft_cfg.get("use_wandb", True):
+    wandb_mode = str(ft_cfg.get("wandb_mode", "online")).lower()
+    if wandb_mode not in {"online", "offline", "disabled"}:
+        raise ValueError("finetune.wandb_mode must be one of: online, offline, disabled")
+    if not ft_cfg.get("use_wandb", True) or wandb_mode == "disabled":
+        ft_cfg["use_wandb"] = False
         os.environ["WANDB_DISABLED"] = "true"
         return
     if importlib.util.find_spec("wandb") is None:
@@ -42,6 +46,14 @@ def _setup_wandb_env(config: dict) -> None:
             "Install it with: pip install wandb"
         )
         return
+
+    # Ensure disabled flag from previous shells does not leak.
+    os.environ.pop("WANDB_DISABLED", None)
+    if wandb_mode == "offline":
+        os.environ["WANDB_MODE"] = "offline"
+        print("wandb offline mode enabled: logs are saved locally and not synced.")
+    else:
+        os.environ["WANDB_MODE"] = "online"
 
     wandb_cfg = ft_cfg.get("wandb", {})
     if wandb_cfg.get("project"):

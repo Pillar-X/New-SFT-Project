@@ -56,7 +56,11 @@ def _load_root_env() -> None:
 
 def _setup_wandb_env(config: dict[str, Any]) -> None:
     ft_cfg = config["finetune"]
-    if not ft_cfg.get("use_wandb", True):
+    wandb_mode = str(ft_cfg.get("wandb_mode", "online")).lower()
+    if wandb_mode not in {"online", "offline", "disabled"}:
+        raise ValueError("finetune.wandb_mode must be one of: online, offline, disabled")
+    if not ft_cfg.get("use_wandb", True) or wandb_mode == "disabled":
+        ft_cfg["use_wandb"] = False
         os.environ["WANDB_DISABLED"] = "true"
         return
     if importlib.util.find_spec("wandb") is None:
@@ -64,6 +68,8 @@ def _setup_wandb_env(config: dict[str, Any]) -> None:
         os.environ["WANDB_DISABLED"] = "true"
         print("wandb not installed. Continue search without wandb tracking.")
         return
+    os.environ.pop("WANDB_DISABLED", None)
+    os.environ["WANDB_MODE"] = "offline" if wandb_mode == "offline" else "online"
     wandb_cfg = ft_cfg.get("wandb", {})
     if wandb_cfg.get("project"):
         os.environ["WANDB_PROJECT"] = str(wandb_cfg["project"])

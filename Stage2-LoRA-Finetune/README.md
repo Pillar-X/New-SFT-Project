@@ -126,7 +126,11 @@ conda activate llm_project
 3. 配置 W&B（如需在线记录）：
 - 在仓库根目录 `.env` 填好完整 `WANDB_API_KEY`（见上文「API KEY vs Key ID」）
 - 在当前训练环境安装 `wandb`：`pip install wandb`
-- 如果不想上报 W&B，可将 `finetune.use_wandb` 设为 `false`
+- `finetune.wandb_mode` 支持三种模式：
+  - `online`：默认在线上报
+  - `offline`：离线记录，不访问外网（适合集群无公网）
+  - `disabled`：完全关闭 wandb（等价于 `finetune.use_wandb: false`）
+- 集群无网推荐：`finetune.wandb_mode: offline`（或直接 `disabled`）
 
 4. 启动训练（二选一）：
 
@@ -283,7 +287,7 @@ python scripts/04_eval_boxed_accuracy.py --config configs/default.yaml
 - `scripts/` 每个脚本只负责一个明确步骤，并保留 `main()` 入口。
 - 参数尽量走 `configs/default.yaml`，不要硬编码路径和模型名。
 - 双卡 Ray 并行评估请使用 `configs/default_ray_dual_gpu.yaml`，不要直接改 `configs/default.yaml`。
-- W&B 的 `API Key/Project/Entity/Run Name` 放在 `.env`，代码里通过 `python-dotenv` 自动加载。
+- W&B 的 `API Key/Project/Entity/Run Name` 放在 `.env`，代码里通过 `python-dotenv` 自动加载；无网环境可用 `finetune.wandb_mode: offline` 或 `disabled`。
 - 临时调试代码放在 `notebooks/`、`tests/` 或临时文件，不要混进正式脚本。
 - 数据构建阶段若样本长度超过 `finetune.max_seq_length`，会打印 `[dataset-truncate] ... truncated_tokens=...`；未截断样本不输出。
 - 训练日志新增 `avg_loss_50`（最近 50 个 loss 的滑动平均）用于更稳定地观察 loss 趋势。

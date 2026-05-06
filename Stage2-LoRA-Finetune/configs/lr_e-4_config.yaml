@@ -34,6 +34,7 @@ finetune:
   max_seq_length: 1024
   eval_split_ratio: 0.0
   use_wandb: true
+  wandb_mode: online
   run_name: qwen3-0.6b-lora-sft-small
   dtype: auto
   bf16: false
