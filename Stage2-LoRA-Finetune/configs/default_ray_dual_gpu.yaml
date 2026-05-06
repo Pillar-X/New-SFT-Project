@@ -75,7 +75,7 @@ evaluation:
   sample_size: 50
   every_n_steps: 200
   seed: 42
-  max_new_tokens: 512
+  max_new_tokens: 1024
   temperature: 0.0
   do_sample: false
   enable_during_training: true
