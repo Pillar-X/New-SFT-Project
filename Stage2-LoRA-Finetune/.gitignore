@@ -19,7 +19,7 @@ venv/
 logs/*
 outputs/*
 models/*
-wandb/*
+
 
 # Data artifacts
 data/interim/*

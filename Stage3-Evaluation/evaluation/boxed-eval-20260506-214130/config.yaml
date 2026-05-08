@@ -1,0 +1,39 @@
+project:
+  name: project_name
+  seed: 42
+
+paths:
+  output_dir: outputs
+  log_dir: logs
+
+model:
+  base_model_path: models/Qwen3-0.6B-Base
+  lora_path: lora/lora-20260506-202020-checkpoint-300
+  lora_alias: stage3_lora
+  served_model_name: qwen3-0.6b-lora-stage3
+  base_url: http://localhost:8000/v1
+  api_key: EMPTY
+
+vllm:
+  host: 0.0.0.0
+  port: 8000
+  dtype: auto
+  tensor_parallel_size: 2
+  gpu_memory_utilization: 0.90
+  max_model_len: 4096
+  enforce_eager: false
+  disable_log_stats: true
+  extra_args: []
+
+evaluation:
+  input_path: data/eval/valid_1000.jsonl
+  output_dir: evaluation
+  max_samples: null
+  concurrent_requests: 64
+  max_new_tokens: 512
+  temperature: 0.0
+  do_sample: false
+  timeout_seconds: 180
+  progress_every_requests: 100
+  progress_every_rows: 50
+
