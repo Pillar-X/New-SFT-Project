@@ -30,6 +30,7 @@ from src.project_name.eval_boxed import (
     load_model_and_tokenizer,
     sample_eval_items,
 )
+from src.project_name.wandb_util import log_boxed_eval_metrics
 
 try:
     import ray
@@ -148,8 +149,11 @@ def _evaluate_checkpoint_boxed_accuracy(
         "question_accuracy": report["question_accuracy"],
         "seed_accuracy": report["seed_accuracy"],
         "combined_accuracy": report["combined_accuracy"],
+        "question_correct": report["question_correct"],
         "question_total": report["question_total"],
+        "seed_correct": report["seed_correct"],
         "seed_total": report["seed_total"],
+        "combined_correct": report["combined_correct"],
         "combined_total": report["combined_total"],
         "report_path": str(out_file),
         "adapter_path": adapter_path,
@@ -247,6 +251,7 @@ class BoxedEvalCallback(TrainerCallback):
             f"seed_acc={report['seed_accuracy']:.4f} "
             f"combined_acc={report['combined_accuracy']:.4f}"
         )
+        log_boxed_eval_metrics(report, step=int(step_value))
 
     def on_step_end(
         self,
@@ -382,6 +387,11 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                     f"device={result.get('eval_device_used')} "
                     f"report={result['report_path']}"
                 )
+                log_boxed_eval_metrics(
+                    result,
+                    step=int(result["step"]),
+                    extra={"eval_device": result.get("eval_device_used")},
+                )
             except Exception as exc:
                 print(f"[boxed-eval][ray] step={step} failed: {exc}")
             shutil.rmtree(snapshot_dir, ignore_errors=True)
@@ -503,6 +513,11 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                     f"device={result.get('eval_device_used')} "
                     f"report={result['report_path']}"
                 )
+                log_boxed_eval_metrics(
+                    result,
+                    step=int(result["step"]),
+                    extra={"eval_device": result.get("eval_device_used")},
+                )
             except Exception as exc:
                 print(f"[boxed-eval][ray][finalized] step={step} failed: {exc}")
             shutil.rmtree(snapshot_dir, ignore_errors=True)
@@ -541,6 +556,54 @@ class AvgLossCallback(TrainerCallback):
             f"loss={loss_float:.6f} {self.metric_name}={avg_loss:.6f} "
             f"window={len(self.loss_window)}"
         )
+        return control
+
+
+class EvalLossEarlyStopCallback(TrainerCallback):
+    """Stop training if eval_loss does not decrease for N evaluations."""
+
+    def __init__(self, *, patience: int = 3, min_delta: float = 0.0) -> None:
+        self.patience = max(1, int(patience))
+        self.min_delta = max(0.0, float(min_delta))
+        self.best_eval_loss: float | None = None
+        self.bad_eval_count = 0
+
+    def on_evaluate(
+        self,
+        args: TrainingArguments,
+        state: TrainerState,
+        control: TrainerControl,
+        metrics: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> TrainerControl:
+        if args.process_index != 0:
+            return control
+        if not metrics:
+            return control
+        eval_loss = metrics.get("eval_loss")
+        if eval_loss is None:
+            return control
+
+        current = float(eval_loss)
+        if self.best_eval_loss is None or current < (self.best_eval_loss - self.min_delta):
+            self.best_eval_loss = current
+            self.bad_eval_count = 0
+            print(
+                f"[early-stop] step={int(state.global_step)} eval_loss improved to {current:.6f}"
+            )
+            return control
+
+        self.bad_eval_count += 1
+        print(
+            f"[early-stop] step={int(state.global_step)} eval_loss={current:.6f} "
+            f"best={self.best_eval_loss:.6f} no_improve_count={self.bad_eval_count}/{self.patience}"
+        )
+        if self.bad_eval_count >= self.patience:
+            control.should_training_stop = True
+            print(
+                "[early-stop] triggered: eval_loss did not decrease for "
+                f"{self.patience} consecutive evaluations."
+            )
         return control
 
 
@@ -727,6 +790,15 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
 
     callbacks: list[TrainerCallback] = []
     callbacks.append(AvgLossCallback(window_size=10))
+    early_stop_patience = _to_int(ft_cfg.get("early_stop_patience_on_eval_loss", 3))
+    early_stop_min_delta = _to_float(ft_cfg.get("early_stop_min_delta", 0.0))
+    if eval_dataset is not None and early_stop_patience > 0:
+        callbacks.append(
+            EvalLossEarlyStopCallback(
+                patience=early_stop_patience,
+                min_delta=early_stop_min_delta,
+            )
+        )
     stamp = str(ft_cfg.get("_lora_run_stamp", "")).strip()
     if stamp and bool(ft_cfg.get("lora_checkpoint_symlinks", False)):
         callbacks.append(

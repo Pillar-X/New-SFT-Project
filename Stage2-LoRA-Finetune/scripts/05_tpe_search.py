@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import copy
 import csv
-import importlib.util
 import json
 import os
 import shutil
@@ -23,6 +22,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.project_name.config import load_yaml_config
 from src.project_name.eval_boxed import evaluate_boxed_accuracy, load_eval_items, sample_eval_items
 from src.project_name.lora_sft import create_trainer
+from src.project_name.wandb_util import configure_wandb_environment, log_boxed_eval_metrics
 
 
 def parse_args() -> argparse.Namespace:
@@ -52,29 +52,6 @@ def parse_args() -> argparse.Namespace:
 
 def _load_root_env() -> None:
     load_dotenv(PROJECT_ROOT.parent / ".env")
-
-
-def _setup_wandb_env(config: dict[str, Any]) -> None:
-    ft_cfg = config["finetune"]
-    wandb_mode = str(ft_cfg.get("wandb_mode", "online")).lower()
-    if wandb_mode not in {"online", "offline", "disabled"}:
-        raise ValueError("finetune.wandb_mode must be one of: online, offline, disabled")
-    if not ft_cfg.get("use_wandb", True) or wandb_mode == "disabled":
-        ft_cfg["use_wandb"] = False
-        os.environ["WANDB_DISABLED"] = "true"
-        return
-    if importlib.util.find_spec("wandb") is None:
-        ft_cfg["use_wandb"] = False
-        os.environ["WANDB_DISABLED"] = "true"
-        print("wandb not installed. Continue search without wandb tracking.")
-        return
-    os.environ.pop("WANDB_DISABLED", None)
-    os.environ["WANDB_MODE"] = "offline" if wandb_mode == "offline" else "online"
-    wandb_cfg = ft_cfg.get("wandb", {})
-    if wandb_cfg.get("project"):
-        os.environ["WANDB_PROJECT"] = str(wandb_cfg["project"])
-    if wandb_cfg.get("entity"):
-        os.environ["WANDB_ENTITY"] = str(wandb_cfg["entity"])
 
 
 def _boxed_acc_column_name(trial_max_steps: int) -> str:
@@ -138,7 +115,7 @@ def main() -> None:
     _load_root_env()
 
     base_config = load_yaml_config(args.config)
-    _setup_wandb_env(base_config)
+    configure_wandb_environment(base_config)
 
     search_cfg = base_config.get("hparam_search", {})
     if str(search_cfg.get("method", "")).lower() != "tpe":
@@ -241,6 +218,11 @@ def main() -> None:
             if was_training:
                 trainer.model.train()
         accuracy = float(report["accuracy"])
+        log_boxed_eval_metrics(
+            report,
+            step=int(trial_max_steps),
+            extra={"optuna_trial": trial.number, "learning_rate": learning_rate},
+        )
 
         trial_report = {
             "trial_id": trial.number,

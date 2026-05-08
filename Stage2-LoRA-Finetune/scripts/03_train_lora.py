@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
-import os
 import sys
 from pathlib import Path
 
@@ -15,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.project_name.config import load_yaml_config
 from src.project_name.lora_sft import create_trainer
+from src.project_name.wandb_util import configure_wandb_environment
 
 
 def _load_dotenv_files() -> None:
@@ -28,47 +27,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _setup_wandb_env(config: dict) -> None:
-    ft_cfg = config["finetune"]
-    wandb_mode = str(ft_cfg.get("wandb_mode", "online")).lower()
-    if wandb_mode not in {"online", "offline", "disabled"}:
-        raise ValueError("finetune.wandb_mode must be one of: online, offline, disabled")
-    if not ft_cfg.get("use_wandb", True) or wandb_mode == "disabled":
-        ft_cfg["use_wandb"] = False
-        os.environ["WANDB_DISABLED"] = "true"
-        return
-    if importlib.util.find_spec("wandb") is None:
-        ft_cfg["use_wandb"] = False
-        os.environ["WANDB_DISABLED"] = "true"
-        print(
-            "wandb is not installed in current environment. "
-            "Continue without wandb tracking. "
-            "Install it with: pip install wandb"
-        )
-        return
-
-    # Ensure disabled flag from previous shells does not leak.
-    os.environ.pop("WANDB_DISABLED", None)
-    if wandb_mode == "offline":
-        os.environ["WANDB_MODE"] = "offline"
-        print("wandb offline mode enabled: logs are saved locally and not synced.")
-    else:
-        os.environ["WANDB_MODE"] = "online"
-
-    wandb_cfg = ft_cfg.get("wandb", {})
-    if wandb_cfg.get("project"):
-        os.environ["WANDB_PROJECT"] = str(wandb_cfg["project"])
-    if wandb_cfg.get("entity"):
-        os.environ["WANDB_ENTITY"] = str(wandb_cfg["entity"])
-    if wandb_cfg.get("name"):
-        os.environ["WANDB_NAME"] = str(wandb_cfg["name"])
-
-
 def main() -> None:
     args = parse_args()
     _load_dotenv_files()
     config = load_yaml_config(args.config)
-    _setup_wandb_env(config)
+    configure_wandb_environment(config)
 
     trainer, tokenizer = create_trainer(config)
     train_result = trainer.train()

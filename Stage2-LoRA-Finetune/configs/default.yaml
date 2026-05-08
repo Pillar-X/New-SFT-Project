@@ -52,6 +52,7 @@ finetune:
   save_steps: 100
   eval_steps: 100
   save_total_limit: 3
+  early_stop_patience_on_eval_loss: 3
   lora:
     r: 16
     lora_alpha: 32
