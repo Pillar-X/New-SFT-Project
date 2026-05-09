@@ -36,4 +36,7 @@ evaluation:
   timeout_seconds: 180
   progress_every_requests: 100
   progress_every_rows: 50
+  # After metrics: random subsets for manual inspection (JSON + Markdown).
+  review_samples_each: 5
+  review_samples_seed: 42
 
