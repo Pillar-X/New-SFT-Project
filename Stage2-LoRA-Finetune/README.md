@@ -217,7 +217,7 @@ make tpe-search
 
 3. 搜参评估逻辑：
 - 数据集：`data/eval/valid_800.jsonl`
-- 每次评估随机抽样：`evaluation.sample_size = 50`
+- 每次 trial 评估会抽样：`evaluation.sample_size = 50`
 - 输入模型：`question`
 - 每条样本会评测两个问题：`question` 与 `seed_question`，分别和 `answer` / `seed_answer` 比较 `\boxed{}` 结果
 - 在 TPE 搜参模式下，会关闭训练中每 100 step 的自动评估，只在 trial 结束时评估一次
@@ -252,12 +252,16 @@ make plot-tpe
 
 6. 测试集评估（boxed 准确率）：
 - 测试集：`data/eval/valid_800.jsonl`
-- 评测方式：每次随机抽取 50 条样本；每条样本依次评测 `question` 与 `seed_question` 两个问题，分别统计准确率并给出合并准确率
+- 评测方式：在训练开始时固定抽取 50 条样本；同一次训练里的每个 step 都在同一批样本上评估。每条样本依次评测 `question` 与 `seed_question` 两个问题，分别统计准确率并给出合并准确率
 - 训练中会按 `evaluation.every_n_steps`（默认 100）自动执行一次并打印结果，例如：
   - `[boxed-eval] step=100 sampled=50 question_acc=0.xxxx seed_acc=0.xxxx combined_acc=0.xxxx`
 - 训练开始前会先做一轮 step=0 的 boxed 评估，作为基线。
 - 若启用 `evaluation.async_backend: ray`，评估会异步在 `evaluation.ray.eval_device` 指定 GPU 上运行，训练不会等待评估结束。
 - 若 `finetune.eval_split_ratio > 0`（例如 0.1），会从训练数据中切出对应比例作为 `eval_dataset`，该部分不参与梯度更新；Trainer 会按 `finetune.eval_steps` 输出 `eval_loss`，可用于观察过拟合趋势。
+- 早停可配置为两种口径：
+  - `finetune.early_stop_metric: eval_loss`（默认）  
+  - `finetune.early_stop_metric: boxed_accuracy`
+  - 连续不改善次数用 `finetune.early_stop_patience` 控制，改善阈值用 `finetune.early_stop_min_delta` 控制。
 - 在 TPE 搜参模式下会关闭上述“每100步评估”，统一改为训练到 199 step 后仅评估一次作为 trial 分数。
 
 ```bash

@@ -52,7 +52,8 @@ finetune:
   save_steps: 100
   eval_steps: 100
   save_total_limit: 5
-  early_stop_patience_on_eval_loss: 3
+  early_stop_metric: eval_loss  # options: eval_loss | boxed_accuracy
+  early_stop_patience: 2
   lora_checkpoint_symlinks: true
   lora:
     r: 16

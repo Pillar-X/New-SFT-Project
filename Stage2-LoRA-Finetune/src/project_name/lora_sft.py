@@ -24,6 +24,7 @@ from transformers import (
 )
 
 from src.project_name.eval_boxed import (
+    _boxed_eval_msg,
     EvalItem,
     evaluate_boxed_accuracy,
     load_eval_items,
@@ -113,9 +114,21 @@ def _evaluate_checkpoint_boxed_accuracy(
     eval_device_label: str,
     progress_log_every: int | None,
     eval_batch_size: int,
+    fixed_eval_items: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
-    items = load_eval_items(test_data_path)
-    sampled = sample_eval_items(items=items, sample_size=sample_size, seed=seed + step)
+    if fixed_eval_items is not None:
+        sampled = [
+            EvalItem(
+                question=str(x.get("question", "")),
+                gold_answer=str(x.get("gold_answer", "")),
+                seed_question=str(x.get("seed_question", "")),
+                seed_answer=str(x.get("seed_answer", "")),
+            )
+            for x in fixed_eval_items
+        ]
+    else:
+        items = load_eval_items(test_data_path)
+        sampled = sample_eval_items(items=items, sample_size=sample_size, seed=seed)
     model, tokenizer = load_model_and_tokenizer(
         model_path=model_path,
         adapter_path=adapter_path,
@@ -179,17 +192,100 @@ def _ray_boxed_eval_launch_plan(eval_device: str) -> tuple[dict[str, Any] | None
         return None, "cpu", "cpu"
     if want_idx >= n:
         print(
-            f"[boxed-eval][ray] eval_device={raw} but only {n} CUDA device(s) are visible "
-            "to the trainer process; falling back to cuda:0 for eval."
+            _boxed_eval_msg(
+                f"[boxed-eval][ray] eval_device={raw} but only {n} CUDA device(s) are visible "
+                "to the trainer process; falling back to cuda:0 for eval."
+            )
         )
         return {"env_vars": {"CUDA_VISIBLE_DEVICES": "0"}}, "cuda:0", "cuda:0"
     if n == 1:
         print(
-            f"[boxed-eval][ray] eval_device={raw} but only one CUDA device is visible "
-            "(often because CUDA_VISIBLE_DEVICES exposes a single GPU); eval shares cuda:0."
+            _boxed_eval_msg(
+                f"[boxed-eval][ray] eval_device={raw} but only one CUDA device is visible "
+                "(often because CUDA_VISIBLE_DEVICES exposes a single GPU); eval shares cuda:0."
+            )
         )
         return None, "cuda:0", "cuda:0"
     return {"env_vars": {"CUDA_VISIBLE_DEVICES": str(want_idx)}}, "cuda:0", raw
+
+
+class EarlyStopMetricMonitor:
+    def __init__(self, *, metric: str, patience: int, min_delta: float) -> None:
+        normalized = str(metric).strip().lower()
+        if normalized not in {"eval_loss", "boxed_accuracy"}:
+            raise ValueError(f"Unsupported early_stop_metric: {metric}")
+        self.metric = normalized
+        self.patience = max(1, int(patience))
+        self.min_delta = max(0.0, float(min_delta))
+        self.best: float | None = None
+        self.bad_count = 0
+        self.triggered = False
+
+    def _observe(
+        self,
+        *,
+        value: float,
+        step: int,
+        higher_is_better: bool,
+        metric_name: str,
+    ) -> bool:
+        if self.triggered:
+            return True
+
+        if self.best is None:
+            self.best = value
+            self.bad_count = 0
+            print(_boxed_eval_msg(f"[early-stop] step={step} {metric_name} initialized at {value:.6f}"))
+            return False
+
+        if higher_is_better:
+            improved = value > (self.best + self.min_delta)
+        else:
+            improved = value < (self.best - self.min_delta)
+
+        if improved:
+            self.best = value
+            self.bad_count = 0
+            print(_boxed_eval_msg(f"[early-stop] step={step} {metric_name} improved to {value:.6f}"))
+            return False
+
+        self.bad_count += 1
+        print(
+            _boxed_eval_msg(
+                f"[early-stop] step={step} {metric_name}={value:.6f} "
+                f"best={self.best:.6f} no_improve_count={self.bad_count}/{self.patience}"
+            )
+        )
+        if self.bad_count >= self.patience:
+            self.triggered = True
+            print(
+                _boxed_eval_msg(
+                    "[early-stop] triggered: metric did not improve for "
+                    f"{self.patience} consecutive evaluations."
+                )
+            )
+            return True
+        return False
+
+    def observe_eval_loss(self, *, value: float, step: int) -> bool:
+        if self.metric != "eval_loss":
+            return False
+        return self._observe(
+            value=value,
+            step=step,
+            higher_is_better=False,
+            metric_name="eval_loss",
+        )
+
+    def observe_boxed_accuracy(self, *, value: float, step: int) -> bool:
+        if self.metric != "boxed_accuracy":
+            return False
+        return self._observe(
+            value=value,
+            step=step,
+            higher_is_better=True,
+            metric_name="boxed_accuracy",
+        )
 
 
 class BoxedEvalCallback(TrainerCallback):
@@ -205,9 +301,9 @@ class BoxedEvalCallback(TrainerCallback):
         temperature: float,
         do_sample: bool,
         eval_batch_size: int,
+        early_stop_monitor: EarlyStopMetricMonitor | None = None,
     ) -> None:
         self.tokenizer = tokenizer
-        self.eval_items = eval_items
         self.sample_size = sample_size
         self.every_n_steps = every_n_steps
         self.seed = seed
@@ -215,28 +311,27 @@ class BoxedEvalCallback(TrainerCallback):
         self.temperature = temperature
         self.do_sample = do_sample
         self.eval_batch_size = max(1, int(eval_batch_size))
+        self.early_stop_monitor = early_stop_monitor
+        self.eval_items = sample_eval_items(
+            items=eval_items,
+            sample_size=self.sample_size,
+            seed=self.seed,
+        )
 
     def _run_boxed_eval(
         self,
         *,
         model: AutoModelForCausalLM,
-        step_seed: int,
         step_label: str,
         step_value: int,
-    ) -> None:
-        sampled = sample_eval_items(
-            items=self.eval_items,
-            sample_size=self.sample_size,
-            seed=step_seed,
-        )
-
+    ) -> dict[str, Any]:
         was_training = model.training
         model.eval()
         with torch.no_grad():
             report = evaluate_boxed_accuracy(
                 model=model,
                 tokenizer=self.tokenizer,
-                items=sampled,
+                items=self.eval_items,
                 max_new_tokens=self.max_new_tokens,
                 temperature=self.temperature,
                 do_sample=self.do_sample,
@@ -246,12 +341,15 @@ class BoxedEvalCallback(TrainerCallback):
             model.train()
 
         print(
-            f"[boxed-eval] {step_label}={step_value} "
-            f"sampled={len(sampled)} question_acc={report['question_accuracy']:.4f} "
-            f"seed_acc={report['seed_accuracy']:.4f} "
-            f"combined_acc={report['combined_accuracy']:.4f}"
+            _boxed_eval_msg(
+                f"[boxed-eval] {step_label}={step_value} "
+                f"sampled={len(self.eval_items)} question_acc={report['question_accuracy']:.4f} "
+                f"seed_acc={report['seed_accuracy']:.4f} "
+                f"combined_acc={report['combined_accuracy']:.4f}"
+            )
         )
         log_boxed_eval_metrics(report, step=int(step_value))
+        return report
 
     def on_step_end(
         self,
@@ -268,12 +366,17 @@ class BoxedEvalCallback(TrainerCallback):
         if args.process_index != 0:
             return control
 
-        self._run_boxed_eval(
+        report = self._run_boxed_eval(
             model=model,
-            step_seed=self.seed + int(state.global_step),
             step_label="step",
             step_value=int(state.global_step),
         )
+        if self.early_stop_monitor is not None:
+            if self.early_stop_monitor.observe_boxed_accuracy(
+                value=float(report["combined_accuracy"]),
+                step=int(state.global_step),
+            ):
+                control.should_training_stop = True
         return control
 
     def on_train_begin(
@@ -290,7 +393,6 @@ class BoxedEvalCallback(TrainerCallback):
             return control
         self._run_boxed_eval(
             model=model,
-            step_seed=self.seed,
             step_label="init_step",
             step_value=0,
         )
@@ -310,7 +412,6 @@ class BoxedEvalCallback(TrainerCallback):
             return control
         self._run_boxed_eval(
             model=model,
-            step_seed=self.seed + int(state.global_step) + 99991,
             step_label="train_end_step",
             step_value=int(state.global_step),
         )
@@ -336,6 +437,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         shutdown_ray_on_end: bool,
         progress_log_every: int | None,
         eval_batch_size: int,
+        early_stop_monitor: EarlyStopMetricMonitor | None = None,
     ) -> None:
         if ray is None:
             raise ImportError("ray is required for async Ray evaluation. Install with: pip install ray")
@@ -354,15 +456,32 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         self.eval_batch_size = max(1, int(eval_batch_size))
         self.shutdown_ray_on_end = shutdown_ray_on_end
         self.progress_log_every = progress_log_every
+        self.early_stop_monitor = early_stop_monitor
         self.snapshot_root = self.output_dir / "async_eval_snapshots"
         self.report_root = self.output_dir / "boxed_eval_reports"
         self.pending_jobs: list[tuple[Any, int, Path]] = []
         self.submitted_steps: set[int] = set()
+        base_eval_items = load_eval_items(self.test_data_path)
+        fixed_items = sample_eval_items(
+            items=base_eval_items,
+            sample_size=self.sample_size,
+            seed=self.seed,
+        )
+        self.fixed_eval_items_payload = [
+            {
+                "question": item.question,
+                "gold_answer": item.gold_answer,
+                "seed_question": item.seed_question,
+                "seed_answer": item.seed_answer,
+            }
+            for item in fixed_items
+        ]
         self.remote_eval = ray.remote(num_cpus=1)(_evaluate_checkpoint_boxed_accuracy)
 
-    def _collect_finished_jobs(self) -> None:
+    def _collect_finished_jobs(self) -> bool:
+        should_stop = False
         if not self.pending_jobs:
-            return
+            return should_stop
         pending_refs = [job[0] for job in self.pending_jobs]
         ready_refs, _ = ray.wait(
             pending_refs,
@@ -370,7 +489,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             timeout=0,
         )
         if not ready_refs:
-            return
+            return should_stop
         ready_set = set(ready_refs)
         remaining: list[tuple[Any, int, Path]] = []
         for ref, step, snapshot_dir in self.pending_jobs:
@@ -380,28 +499,39 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             try:
                 result = ray.get(ref)
                 print(
-                    f"[boxed-eval][ray] step={result['step']} "
-                    f"question_acc={result['question_accuracy']:.4f} "
-                    f"seed_acc={result['seed_accuracy']:.4f} "
-                    f"combined_acc={result['combined_accuracy']:.4f} "
-                    f"device={result.get('eval_device_used')} "
-                    f"report={result['report_path']}"
+                    _boxed_eval_msg(
+                        f"[boxed-eval][ray] step={result['step']} "
+                        f"question_acc={result['question_accuracy']:.4f} "
+                        f"seed_acc={result['seed_accuracy']:.4f} "
+                        f"combined_acc={result['combined_accuracy']:.4f} "
+                        f"device={result.get('eval_device_used')} "
+                        f"report={result['report_path']}"
+                    )
                 )
+                if self.early_stop_monitor is not None:
+                    if self.early_stop_monitor.observe_boxed_accuracy(
+                        value=float(result["combined_accuracy"]),
+                        step=int(result["step"]),
+                    ):
+                        should_stop = True
                 log_boxed_eval_metrics(
                     result,
                     step=int(result["step"]),
                     extra={"eval_device": result.get("eval_device_used")},
                 )
             except Exception as exc:
-                print(f"[boxed-eval][ray] step={step} failed: {exc}")
+                print(_boxed_eval_msg(f"[boxed-eval][ray] step={step} failed: {exc}"))
             shutil.rmtree(snapshot_dir, ignore_errors=True)
         self.pending_jobs = remaining
+        return should_stop
 
     def _submit_job(self, *, model: AutoModelForCausalLM, step: int) -> None:
         if len(self.pending_jobs) >= self.max_new_jobs:
             print(
-                f"[boxed-eval][ray] skip step={step}: "
-                f"pending_jobs={len(self.pending_jobs)} reached limit={self.max_new_jobs}"
+                _boxed_eval_msg(
+                    f"[boxed-eval][ray] skip step={step}: "
+                    f"pending_jobs={len(self.pending_jobs)} reached limit={self.max_new_jobs}"
+                )
             )
             return
         snapshot_dir = self.snapshot_root / f"step-{step}"
@@ -428,13 +558,16 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             eval_device_label=eval_label,
             progress_log_every=self.progress_log_every,
             eval_batch_size=self.eval_batch_size,
+            fixed_eval_items=self.fixed_eval_items_payload,
         )
         self.pending_jobs.append((ref, step, snapshot_dir))
         self.submitted_steps.add(step)
         print(
-            f"[boxed-eval][ray] submitted step={step} "
-            f"pending_jobs={len(self.pending_jobs)} snapshot={snapshot_dir} "
-            f"eval_target={eval_label} torch_device={torch_device}"
+            _boxed_eval_msg(
+                f"[boxed-eval][ray] submitted step={step} "
+                f"pending_jobs={len(self.pending_jobs)} snapshot={snapshot_dir} "
+                f"eval_target={eval_label} torch_device={torch_device}"
+            )
         )
 
     def on_step_end(
@@ -449,7 +582,8 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             return control
         if args.process_index != 0:
             return control
-        self._collect_finished_jobs()
+        if self._collect_finished_jobs():
+            control.should_training_stop = True
         step = int(state.global_step)
         if step % self.every_n_steps != 0:
             return control
@@ -464,7 +598,8 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         **kwargs: Any,
     ) -> TrainerControl:
         if args.process_index == 0:
-            self._collect_finished_jobs()
+            if self._collect_finished_jobs():
+                control.should_training_stop = True
         return control
 
     def on_train_begin(
@@ -497,8 +632,10 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
         if model is not None and final_step > 0 and final_step not in self.submitted_steps:
             self._collect_finished_jobs()
             print(
-                f"[boxed-eval][ray] submit final_step={final_step} "
-                "(not aligned with every_n_steps)"
+                _boxed_eval_msg(
+                    f"[boxed-eval][ray] submit final_step={final_step} "
+                    "(not aligned with every_n_steps)"
+                )
             )
             self._submit_job(model=model, step=final_step)
         while self.pending_jobs:
@@ -506,12 +643,14 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
             try:
                 result = ray.get(ref)
                 print(
-                    f"[boxed-eval][ray][finalized] step={result['step']} "
-                    f"question_acc={result['question_accuracy']:.4f} "
-                    f"seed_acc={result['seed_accuracy']:.4f} "
-                    f"combined_acc={result['combined_accuracy']:.4f} "
-                    f"device={result.get('eval_device_used')} "
-                    f"report={result['report_path']}"
+                    _boxed_eval_msg(
+                        f"[boxed-eval][ray][finalized] step={result['step']} "
+                        f"question_acc={result['question_accuracy']:.4f} "
+                        f"seed_acc={result['seed_accuracy']:.4f} "
+                        f"combined_acc={result['combined_accuracy']:.4f} "
+                        f"device={result.get('eval_device_used')} "
+                        f"report={result['report_path']}"
+                    )
                 )
                 log_boxed_eval_metrics(
                     result,
@@ -519,7 +658,7 @@ class AsyncRayBoxedEvalCallback(TrainerCallback):
                     extra={"eval_device": result.get("eval_device_used")},
                 )
             except Exception as exc:
-                print(f"[boxed-eval][ray][finalized] step={step} failed: {exc}")
+                print(_boxed_eval_msg(f"[boxed-eval][ray][finalized] step={step} failed: {exc}"))
             shutil.rmtree(snapshot_dir, ignore_errors=True)
         if self.shutdown_ray_on_end and ray.is_initialized():
             ray.shutdown()
@@ -562,11 +701,8 @@ class AvgLossCallback(TrainerCallback):
 class EvalLossEarlyStopCallback(TrainerCallback):
     """Stop training if eval_loss does not decrease for N evaluations."""
 
-    def __init__(self, *, patience: int = 3, min_delta: float = 0.0) -> None:
-        self.patience = max(1, int(patience))
-        self.min_delta = max(0.0, float(min_delta))
-        self.best_eval_loss: float | None = None
-        self.bad_eval_count = 0
+    def __init__(self, *, monitor: EarlyStopMetricMonitor) -> None:
+        self.monitor = monitor
 
     def on_evaluate(
         self,
@@ -584,26 +720,8 @@ class EvalLossEarlyStopCallback(TrainerCallback):
         if eval_loss is None:
             return control
 
-        current = float(eval_loss)
-        if self.best_eval_loss is None or current < (self.best_eval_loss - self.min_delta):
-            self.best_eval_loss = current
-            self.bad_eval_count = 0
-            print(
-                f"[early-stop] step={int(state.global_step)} eval_loss improved to {current:.6f}"
-            )
-            return control
-
-        self.bad_eval_count += 1
-        print(
-            f"[early-stop] step={int(state.global_step)} eval_loss={current:.6f} "
-            f"best={self.best_eval_loss:.6f} no_improve_count={self.bad_eval_count}/{self.patience}"
-        )
-        if self.bad_eval_count >= self.patience:
+        if self.monitor.observe_eval_loss(value=float(eval_loss), step=int(state.global_step)):
             control.should_training_stop = True
-            print(
-                "[early-stop] triggered: eval_loss did not decrease for "
-                f"{self.patience} consecutive evaluations."
-            )
         return control
 
 
@@ -790,13 +908,22 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
 
     callbacks: list[TrainerCallback] = []
     callbacks.append(AvgLossCallback(window_size=10))
-    early_stop_patience = _to_int(ft_cfg.get("early_stop_patience_on_eval_loss", 3))
+    early_stop_metric = str(ft_cfg.get("early_stop_metric", "eval_loss")).strip().lower()
+    early_stop_patience = _to_int(
+        ft_cfg.get("early_stop_patience", ft_cfg.get("early_stop_patience_on_eval_loss", 3))
+    )
     early_stop_min_delta = _to_float(ft_cfg.get("early_stop_min_delta", 0.0))
-    if eval_dataset is not None and early_stop_patience > 0:
+    early_stop_monitor: EarlyStopMetricMonitor | None = None
+    if early_stop_patience > 0:
+        early_stop_monitor = EarlyStopMetricMonitor(
+            metric=early_stop_metric,
+            patience=early_stop_patience,
+            min_delta=early_stop_min_delta,
+        )
+    if eval_dataset is not None and early_stop_monitor is not None and early_stop_metric == "eval_loss":
         callbacks.append(
             EvalLossEarlyStopCallback(
-                patience=early_stop_patience,
-                min_delta=early_stop_min_delta,
+                monitor=early_stop_monitor,
             )
         )
     stamp = str(ft_cfg.get("_lora_run_stamp", "")).strip()
@@ -808,6 +935,21 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
     test_data_path = eval_cfg.get("test_data_path")
     enable_train_time_boxed_eval = bool(eval_cfg.get("enable_during_training", True))
     async_backend = str(eval_cfg.get("async_backend", "none")).lower()
+    if (
+        early_stop_monitor is not None
+        and early_stop_monitor.metric == "eval_loss"
+        and eval_dataset is None
+    ):
+        print("[early-stop] metric=eval_loss but loss eval split is disabled; early stop is inactive.")
+    if (
+        early_stop_monitor is not None
+        and early_stop_monitor.metric == "boxed_accuracy"
+        and not (test_data_path and enable_train_time_boxed_eval)
+    ):
+        print(
+            "[early-stop] metric=boxed_accuracy but train-time boxed eval is disabled; "
+            "early stop is inactive."
+        )
     if test_data_path and enable_train_time_boxed_eval:
         if async_backend == "ray":
             if ray is None:
@@ -850,6 +992,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     shutdown_ray_on_end=started_ray,
                     progress_log_every=progress_log_every,
                     eval_batch_size=_to_int(eval_cfg.get("batch_size", 1)),
+                    early_stop_monitor=early_stop_monitor,
                 )
             )
         else:
@@ -865,6 +1008,7 @@ def create_trainer(config: dict[str, Any]) -> tuple[Trainer, AutoTokenizer]:
                     temperature=_to_float(eval_cfg.get("temperature", 0.0)),
                     do_sample=bool(eval_cfg.get("do_sample", False)),
                     eval_batch_size=_to_int(eval_cfg.get("batch_size", 1)),
+                    early_stop_monitor=early_stop_monitor,
                 )
             )
 

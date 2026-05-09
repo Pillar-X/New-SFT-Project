@@ -8,7 +8,7 @@ paths:
 
 model:
   base_model_path: models/Qwen3-0.6B-Base
-  lora_path: lora/lora-3-900steps
+  lora_path: lora/lora-2-500steps
   lora_alias: stage3_lora
   served_model_name: qwen3-0.6b-lora-stage3
   base_url: http://localhost:8000/v1

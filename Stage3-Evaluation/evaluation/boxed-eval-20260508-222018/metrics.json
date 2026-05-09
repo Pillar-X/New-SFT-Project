@@ -1,0 +1,8 @@
+{
+  "question_accuracy": 0.233,
+  "seed_accuracy": 0.317,
+  "combined_accuracy": 0.275,
+  "question_total": 1000,
+  "seed_total": 1000,
+  "combined_total": 2000
+}

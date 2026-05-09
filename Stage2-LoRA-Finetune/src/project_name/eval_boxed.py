@@ -12,6 +12,13 @@ import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+ANSI_BLUE = "\033[94m"
+ANSI_RESET = "\033[0m"
+
+
+def _boxed_eval_msg(message: str) -> str:
+    return f"{ANSI_BLUE}{message}{ANSI_RESET}"
+
 
 @dataclass
 class EvalItem:
@@ -326,9 +333,11 @@ def evaluate_boxed_accuracy(
                 run_c = (question_correct + seed_correct) / denom if denom else 0.0
                 tag = f" {progress_label}" if progress_label else ""
                 print(
-                    f"[boxed-eval]{tag} progress rows={n_rows}/{len(items)} "
-                    f"running_q_acc={run_q:.4f} running_seed_acc={run_s:.4f} "
-                    f"running_combined_acc={run_c:.4f}",
+                    _boxed_eval_msg(
+                        f"[boxed-eval]{tag} progress rows={n_rows}/{len(items)} "
+                        f"running_q_acc={run_q:.4f} running_seed_acc={run_s:.4f} "
+                        f"running_combined_acc={run_c:.4f}"
+                    ),
                     flush=True,
                 )
 

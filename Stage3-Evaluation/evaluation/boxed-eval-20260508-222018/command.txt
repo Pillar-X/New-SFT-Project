@@ -1,0 +1,1 @@
+python scripts/01_eval_boxed_accuracy.py --config configs/default.yaml
