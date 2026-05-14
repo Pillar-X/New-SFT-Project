@@ -60,10 +60,10 @@ pip install -r requirements.txt
 请将配置写在仓库根目录 `new-SFT-project/.env`：
 
 ```bash
-WANDB_API_KEY=粘贴官网灰色框内的完整_API_KEY
+WANDB_API_KEY=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
 WANDB_PROJECT=stage2-qwen3-lora
-WANDB_ENTITY=your_team_or_username
-WANDB_NAME=qwen3-0.6b-lora-sft-middle
+WANDB_ENTITY=pillar_x-southern-university-of-science-technology
+WANDB_NAME=qwen3-0.6b-lora-sft-with-wandb
 ```
 
 ## 云 GPU 运行前：手动上传文件清单

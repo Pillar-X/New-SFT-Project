@@ -51,7 +51,7 @@ finetune:
   logging_steps: 10
   save_steps: 100
   eval_steps: 100
-  save_total_limit: 5
+  save_total_limit: 10
   early_stop_metric: eval_loss  # options: eval_loss | boxed_accuracy
   early_stop_patience: 2
   lora_checkpoint_symlinks: true
@@ -71,14 +71,14 @@ finetune:
   wandb:
     project: stage2-qwen3-lora
     entity: ""
-    name: qwen3-0.6b-lora-superparameter_search
+    name: qwen3-0.6b-lora-lr-search
 
 evaluation:
   test_data_path: data/eval/valid_800.jsonl
   sample_size: 64
   batch_size: 4
   every_n_steps: 100
-  seed: 2026
+  seed: 42
   max_new_tokens: 512
   temperature: 0.0
   do_sample: false
