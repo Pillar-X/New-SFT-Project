@@ -7,7 +7,7 @@ paths:
   log_dir: logs
 
 model:
-  base_model_path: models/Qwen3-0.6B-Base
+  base_model_path: /root/New-SFT-Project/Stage2-LoRA-Finetune/models/Qwen3-0.6B-Base
   lora_path: lora/lora-e-5-1700steps
   lora_alias: stage3_lora
   served_model_name: qwen3-0.6b-lora-stage3

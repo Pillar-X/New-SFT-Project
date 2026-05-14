@@ -1,0 +1,8 @@
+pyyaml>=6.0
+python-dotenv>=1.0
+tqdm>=4.66
+torch>=2.2
+transformers>=4.40,<5
+peft>=0.11
+accelerate>=0.29
+wandb>=0.17

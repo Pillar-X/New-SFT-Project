@@ -1,0 +1,36 @@
+project:
+  name: stage4-grpo
+  seed: 42
+
+model:
+  base_model_path: ../Stage2-LoRA-Finetune/models/Qwen3-0.6B-Base
+  lora_adapter_path: ../Stage3-Evaluation/lora/lora2-500steps
+  dataset_path: ../Stage2-LoRA-Finetune/data/sft/sft_boxed_small.json
+
+training:
+  output_dir: outputs/qwen3-0.6b-grpo
+  max_samples: null
+  dtype: bf16
+  per_device_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 1.0e-6
+  max_grad_norm: 1.0
+  max_prompt_length: 768
+  max_steps: 300
+  logging_steps: 1
+  save_steps: 50
+  run_name: qwen3-0.6b-lora-grpo-continue
+  use_wandb: true
+  wandb_mode: online
+  wandb:
+    project: stage4-qwen3-grpo
+    entity: ""
+    name: qwen3-0.6b-lora-grpo-continue
+
+grpo:
+  group_size: 4
+  temperature: 0.9
+  top_p: 0.95
+  max_new_tokens: 128
+  use_reference_model: false
+  kl_coef: 0.0

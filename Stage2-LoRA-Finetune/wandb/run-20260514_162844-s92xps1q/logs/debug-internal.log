@@ -218,3 +218,4 @@
 {"time":"2026-05-14T16:54:07.185084782+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": dial tcp: lookup api.wandb.ai on 10.43.0.10:53: dial udp 10.43.0.10:53: connect: operation not permitted"}
 {"time":"2026-05-14T16:54:07.555158764+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": dial tcp: lookup api.wandb.ai on 10.43.0.10:53: dial udp 10.43.0.10:53: connect: operation not permitted"}
 {"time":"2026-05-14T16:54:32.561045467+08:00","level":"INFO","msg":"filestream: sending request","total_files":0}
+{"time":"2026-05-14T16:54:33.039326832+08:00","level":"INFO","msg":"filestream: request sent","status":"200 OK"}
